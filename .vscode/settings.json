@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "dotnet build": true,
+        "/^powershell -NoProfile -Command \"Start-Process -FilePath 'c:\\\\Users\\\\w\\.souza\\.de\\.lima\\\\OneDrive - Avanade\\\\Área de Trabalho\\\\git\\\\repository-test\\\\installer-panel-dotnet\\\\bin\\\\Debug\\\\net8\\.0-windows\\\\InstallerPanel\\.exe' -WindowStyle Normal\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

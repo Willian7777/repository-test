@@ -1,0 +1,17 @@
+# Build
+bin/
+obj/
+
+# Publish
+publish/
+
+# Visual Studio
+.vs/
+
+# Outputs
+*.exe
+*.dll
+*.pdb
+
+# Logs
+*.log

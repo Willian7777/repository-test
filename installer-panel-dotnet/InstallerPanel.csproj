@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Embutir logos se existirem no projeto root -->
+  <ItemGroup>
+    <EmbeddedResource Include="logo_admin.png" Condition="Exists('logo_admin.png')" />
+    <EmbeddedResource Include="logo_user.png" Condition="Exists('logo_user.png')" />
+    <EmbeddedResource Include="logo_user.jpg" Condition="Exists('logo_user.jpg')" />
+    <EmbeddedResource Include="logo_fallback.png" Condition="Exists('logo_fallback.png')" />
+    <EmbeddedResource Include="logo_fallback.jpg" Condition="Exists('logo_fallback.jpg')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="installer.version">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Auto-increment installer version file on each build using PowerShell (works on Windows) -->
+  <Target Name="BumpInstallerVersion" BeforeTargets="BeforeBuild">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -NonInteractive -File &quot;$(MSBuildProjectDirectory)\bump_version.ps1&quot;" />
+    <ReadLinesFromFile File="$(MSBuildProjectDirectory)\installer.version">
+      <Output TaskParameter="Lines" ItemName="VersionLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <InstallerVersion>%(VersionLines.Identity)</InstallerVersion>
+      <Version>$(InstallerVersion)</Version>
+      <AssemblyVersion>$(InstallerVersion)</AssemblyVersion>
+      <FileVersion>$(InstallerVersion)</FileVersion>
+      <InformationalVersion>$(InstallerVersion)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
+
+</Project>
