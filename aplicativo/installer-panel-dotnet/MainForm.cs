@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.IO.Compression;
 
 namespace InstallerPanel
 {
@@ -347,8 +348,9 @@ namespace InstallerPanel
                     }
                     else if (!string.IsNullOrEmpty(app.Url) && Uri.IsWellFormedUriString(app.Url, UriKind.Absolute))
                     {
+                        var downloadUrl = NormalizeDownloadUrl(app.Url);
                         var temp = Path.Combine(Path.GetTempPath(), Path.GetFileName(new Uri(app.Url).LocalPath));
-                        var resp = await SharedHttpClient.GetAsync(app.Url);
+                        var resp = await SharedHttpClient.GetAsync(downloadUrl);
                         resp.EnsureSuccessStatusCode();
                         using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
@@ -360,6 +362,26 @@ namespace InstallerPanel
                     {
                         MessageBox.Show($"Arquivo inválido ou não encontrado: {app.Url}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         continue;
+                    }
+
+                    // Extrair ZIP (ex: driver .bat + arquivos complementares)
+                    if (Path.GetExtension(exePath).ToLowerInvariant() == ".zip")
+                    {
+                        var extractDir = Path.Combine(Path.GetTempPath(), "InstallerPanel_" + Path.GetFileNameWithoutExtension(exePath));
+                        if (Directory.Exists(extractDir)) Directory.Delete(extractDir, true);
+                        Directory.CreateDirectory(extractDir);
+                        ZipFile.ExtractToDirectory(exePath, extractDir);
+                        var bats = Directory.GetFiles(extractDir, "*.bat", SearchOption.AllDirectories);
+                        var exes = Directory.GetFiles(extractDir, "*.exe", SearchOption.AllDirectories);
+                        var msis = Directory.GetFiles(extractDir, "*.msi", SearchOption.AllDirectories);
+                        var mainFile = bats.FirstOrDefault(f => Path.GetFileName(f).StartsWith("_", StringComparison.OrdinalIgnoreCase))
+                            ?? bats.FirstOrDefault() ?? exes.FirstOrDefault() ?? msis.FirstOrDefault();
+                        if (mainFile == null)
+                        {
+                            MessageBox.Show($"Nenhum executável encontrado no ZIP: {app.Name}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            continue;
+                        }
+                        exePath = mainFile;
                     }
 
                     var silentArgs = BuildSilentArgs(exePath);
@@ -590,6 +612,18 @@ namespace InstallerPanel
             }
         }
 
+        private static string NormalizeDownloadUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return url;
+            // SharePoint sharing links precisam de &download=1 para retornar o arquivo diretamente
+            if ((url.Contains(".sharepoint.com") || url.Contains("sharepoint.com")) &&
+                !url.Contains("download=1"))
+            {
+                url += (url.Contains("?") ? "&" : "?") + "download=1";
+            }
+            return url;
+        }
+
         private string GetRemoteUrl()
         {
             try
@@ -627,7 +661,7 @@ namespace InstallerPanel
             }
             try
             {
-                var json = await SharedHttpClient.GetStringAsync(url);
+                var json = await SharedHttpClient.GetStringAsync(NormalizeDownloadUrl(url));
                 var remoteList = JsonSerializer.Deserialize<List<AppItem>>(json);
                 if (remoteList == null || remoteList.Count == 0)
                 {
