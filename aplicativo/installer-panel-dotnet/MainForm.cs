@@ -667,7 +667,18 @@ namespace InstallerPanel
             }
             try
             {
-                var json = await PublicHttpClient.GetStringAsync(NormalizeDownloadUrl(url));
+                string json = await DownloadTextAsync(NormalizeDownloadUrl(url));
+
+                if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
+                    throw new InvalidOperationException(
+                        "O servidor retornou HTML em vez de JSON.\n\n" +
+                        "O app tenta autenticação automática com seu usuário Windows, mas o SharePoint pode ter bloqueado.\n\n" +
+                        "Alternativas que funcionam sem depender de permissão de 'Qualquer pessoa':\n" +
+                        "• Caminho de rede: \\\\servidor\\pasta\\packages.json\n" +
+                        "• OneDrive sincronizado: C:\\Users\\...\\OneDrive - Comgas\\packages.json\n" +
+                        "• URL raw do GitHub (repositório público)\n\n" +
+                        "Configure via '⚙ Configurar URL'.");
+
                 var remoteList = JsonSerializer.Deserialize<List<AppItem>>(json);
                 if (remoteList == null || remoteList.Count == 0)
                 {
@@ -677,7 +688,6 @@ namespace InstallerPanel
                 }
                 foreach (var a in remoteList)
                     a.IsRemote = true;
-                // remove apps remotos anteriores e adiciona os novos
                 apps.RemoveAll(a => a.IsRemote);
                 apps.AddRange(remoteList);
                 SaveLocalPackages();
@@ -690,6 +700,39 @@ namespace InstallerPanel
                 MessageBox.Show($"Erro ao sincronizar: {ex.Message}", "Erro",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        // Tenta baixar texto: primeiro sem credenciais (links públicos), depois com credenciais Windows
+        private static async Task<string> DownloadTextAsync(string url)
+        {
+            // Caminho local ou de rede
+            if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                return await File.ReadAllTextAsync(url);
+
+            // Tentativa 1: sem credenciais (SharePoint "Qualquer pessoa", GitHub, etc.)
+            try
+            {
+                var resp = await PublicHttpClient.GetAsync(url);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var text = await resp.Content.ReadAsStringAsync();
+                    if (!text.TrimStart().StartsWith("<")) return text;
+                }
+            }
+            catch { }
+
+            // Tentativa 2: com credenciais Windows (SharePoint "Pessoas da organização" via ADFS)
+            using var handler = new HttpClientHandler
+            {
+                UseDefaultCredentials = true,
+                AllowAutoRedirect = true
+            };
+            using var client = new HttpClient(handler);
+            client.DefaultRequestHeaders.Add("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36");
+            var resp2 = await client.GetAsync(url);
+            resp2.EnsureSuccessStatusCode();
+            return await resp2.Content.ReadAsStringAsync();
         }
 
         private void RemoveSelected()
