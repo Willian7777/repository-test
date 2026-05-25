@@ -22,6 +22,7 @@ namespace InstallerPanel
         public DateTime DateUploaded { get; set; } = DateTime.MinValue;
         public string Version { get; set; } = string.Empty;
         public bool Installed { get; set; } = false;
+        public bool IsRemote { get; set; } = false;
     }
 
     public class MainForm : Form
@@ -34,8 +35,10 @@ namespace InstallerPanel
         private Button btnRemove;
         private readonly string packagesDir;
         private readonly string packagesJsonPath;
+        private readonly string remoteConfigPath;
         private readonly Dictionary<string, Image> imageCache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly HttpClient SharedHttpClient = new HttpClient();
+        private static readonly HttpClient SharedHttpClient = new HttpClient(
+            new HttpClientHandler { UseDefaultCredentials = true, AllowAutoRedirect = true });
 
         public MainForm()
         {
@@ -171,6 +174,12 @@ namespace InstallerPanel
             var btnUploadFolder = new Button { Left = startX, Top = btnTop + 30, Width = btnWidth, Text = "Upload Pasta" };
             btnUploadFolder.Click += async (s,e) => await UploadFolder();
             Controls.Add(btnUploadFolder);
+            var btnSync = new Button { Left = startX + btnWidth + gap, Top = btnTop + 30, Width = btnWidth, Text = "↻ Sincronizar" };
+            btnSync.Click += async (s,e) => await SyncFromRemote();
+            Controls.Add(btnSync);
+            var btnConfigUrl = new Button { Left = startX + (btnWidth + gap) * 2, Top = btnTop + 30, Width = btnWidth, Text = "⚙ Configurar URL" };
+            btnConfigUrl.Click += (s,e) => ConfigureRemoteUrl();
+            Controls.Add(btnConfigUrl);
             // ajustar listView para preencher a largura disponível menos padding
             int listLeft = this.Padding.Left;
             int listTop = 162;
@@ -186,6 +195,7 @@ namespace InstallerPanel
 
             packagesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "packages");
             packagesJsonPath = Path.Combine(packagesDir, "packages.json");
+            remoteConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "remote.config");
             Directory.CreateDirectory(packagesDir);
             // carregar pacotes locais ao iniciar
             LoadLocalPackages();
@@ -401,9 +411,10 @@ namespace InstallerPanel
                         if (list != null && list.Count > 0)
                         {
                             apps.AddRange(list);
-                            // preencher valores ausentes (compatibilidade retroativa com json salvo sem propriedades)
+                            // converter URLs relativas para absolutas e preencher valores ausentes
                             foreach (var a in list)
                             {
+                                a.Url = ToAbsoluteUrl(a.Url);
                                 if (string.IsNullOrWhiteSpace(a.Name) && !string.IsNullOrEmpty(a.Url))
                                     a.Name = Path.GetFileName(a.Url);
                                 if (a.DateUploaded == DateTime.MinValue && !string.IsNullOrEmpty(a.Url) && File.Exists(a.Url))
@@ -439,6 +450,7 @@ namespace InstallerPanel
                 foreach (var a in apps)
                 {
                     var li = new ListViewItem(new[] { a.Name, a.DateUploaded == DateTime.MinValue ? string.Empty : a.DateUploaded.ToString("g"), a.Version, a.Installed ? "✓" : "" }) { Checked = false, Tag = a };
+                    if (a.IsRemote) li.ForeColor = Color.DarkBlue;
                     listView.Items.Add(li);
                 }
                 listView.EndUpdate();
@@ -452,11 +464,41 @@ namespace InstallerPanel
             }
         }
 
+        private string ToRelativeUrl(string absoluteUrl)
+        {
+            if (string.IsNullOrEmpty(absoluteUrl)) return absoluteUrl;
+            if (absoluteUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                absoluteUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return absoluteUrl; // URL remota: manter como está
+            if (absoluteUrl.StartsWith(packagesDir, StringComparison.OrdinalIgnoreCase))
+                return absoluteUrl.Substring(packagesDir.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return absoluteUrl;
+        }
+
+        private string ToAbsoluteUrl(string relativeUrl)
+        {
+            if (string.IsNullOrEmpty(relativeUrl)) return relativeUrl;
+            if (Path.IsPathRooted(relativeUrl)) return relativeUrl;
+            if (relativeUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                relativeUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return relativeUrl; // URL remota: manter como está
+            return Path.Combine(packagesDir, relativeUrl);
+        }
+
         private void SaveLocalPackages()
         {
             try
             {
-                var js = JsonSerializer.Serialize(apps, new JsonSerializerOptions { WriteIndented = true });
+                var toSave = apps.Select(a => new AppItem
+                {
+                    Name = a.Name,
+                    Url = ToRelativeUrl(a.Url),
+                    Args = a.Args,
+                    DateUploaded = a.DateUploaded,
+                    Version = a.Version,
+                    Installed = a.Installed
+                }).ToList();
+                var js = JsonSerializer.Serialize(toSave, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(packagesJsonPath, js);
             }
             catch (Exception ex)
@@ -545,6 +587,68 @@ namespace InstallerPanel
             {
                 MessageBox.Show($"Erro ao copiar pasta: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 try { if (Directory.Exists(destDir)) Directory.Delete(destDir, true); } catch { }
+            }
+        }
+
+        private string GetRemoteUrl()
+        {
+            try
+            {
+                if (File.Exists(remoteConfigPath))
+                    return File.ReadAllText(remoteConfigPath).Trim();
+            }
+            catch { }
+            return string.Empty;
+        }
+
+        private string ConfigureRemoteUrl()
+        {
+            var current = GetRemoteUrl();
+            var url = Prompt.ShowDialog(
+                "Cole a URL do packages.json remoto (SharePoint, OneDrive, GitHub, etc.):",
+                "Configurar URL Remota", current);
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                try { File.WriteAllText(remoteConfigPath, url.Trim()); } catch { }
+                MessageBox.Show("URL salva. Clique em Sincronizar para carregar os apps.",
+                    "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return url.Trim();
+            }
+            return string.Empty;
+        }
+
+        private async Task SyncFromRemote()
+        {
+            var url = GetRemoteUrl();
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                url = ConfigureRemoteUrl();
+                if (string.IsNullOrWhiteSpace(url)) return;
+            }
+            try
+            {
+                var json = await SharedHttpClient.GetStringAsync(url);
+                var remoteList = JsonSerializer.Deserialize<List<AppItem>>(json);
+                if (remoteList == null || remoteList.Count == 0)
+                {
+                    MessageBox.Show("Nenhum app encontrado na fonte remota.", "Aviso",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                foreach (var a in remoteList)
+                    a.IsRemote = true;
+                // remove apps remotos anteriores e adiciona os novos
+                apps.RemoveAll(a => a.IsRemote);
+                apps.AddRange(remoteList);
+                SaveLocalPackages();
+                LoadLocalPackages();
+                MessageBox.Show($"{remoteList.Count} app(s) sincronizado(s) com sucesso.",
+                    "Sincronização", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao sincronizar: {ex.Message}", "Erro",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
