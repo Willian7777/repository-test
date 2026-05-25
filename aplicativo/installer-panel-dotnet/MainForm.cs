@@ -40,6 +40,12 @@ namespace InstallerPanel
         private readonly Dictionary<string, Image> imageCache = new(StringComparer.OrdinalIgnoreCase);
         private static readonly HttpClient SharedHttpClient = new HttpClient(
             new HttpClientHandler { UseDefaultCredentials = true, AllowAutoRedirect = true });
+        // Client sem credenciais Windows para URLs públicas do SharePoint Online / OneDrive
+        private static readonly HttpClient PublicHttpClient = new HttpClient(
+            new HttpClientHandler { AllowAutoRedirect = true })
+        {
+            DefaultRequestHeaders = { { "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36" } }
+        };
 
         public MainForm()
         {
@@ -350,7 +356,7 @@ namespace InstallerPanel
                     {
                         var downloadUrl = NormalizeDownloadUrl(app.Url);
                         var temp = Path.Combine(Path.GetTempPath(), Path.GetFileName(new Uri(app.Url).LocalPath));
-                        var resp = await SharedHttpClient.GetAsync(downloadUrl);
+                        var resp = await PublicHttpClient.GetAsync(downloadUrl);
                         resp.EnsureSuccessStatusCode();
                         using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
@@ -661,7 +667,7 @@ namespace InstallerPanel
             }
             try
             {
-                var json = await SharedHttpClient.GetStringAsync(NormalizeDownloadUrl(url));
+                var json = await PublicHttpClient.GetStringAsync(NormalizeDownloadUrl(url));
                 var remoteList = JsonSerializer.Deserialize<List<AppItem>>(json);
                 if (remoteList == null || remoteList.Count == 0)
                 {
