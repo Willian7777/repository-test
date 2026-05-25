@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Termo - Fallback</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;padding:20px}
+    .container{max-width:800px;margin:0 auto;background:#fff;padding:20px;border-radius:6px}
+    input,textarea,select{width:100%;padding:8px;margin:6px 0;border:1px solid #ccc;border-radius:4px}
+    button{padding:10px 14px;background:#0078d4;color:#fff;border:none;border-radius:4px}
+    pre{background:#f0f8ff;padding:10px;border-radius:4px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Termo (Fallback)</h1>
+    <form id="form">
+      <label>Tipo</label>
+      <select id="type"><option value="entrega">Entrega</option><option value="devolucao">Devolução</option></select>
+      <label>Matrícula</label>
+      <input id="matricula" required />
+      <label>Nome do colaborador</label>
+      <input id="nome" required />
+      <label>Equipamento - Tipo</label>
+      <input id="equipTipo" required />
+      <label>Equipamento - Modelo</label>
+      <input id="equipModelo" />
+      <label>Equipamento - Serial/IMEI</label>
+      <input id="equipSerial" required />
+      <label>Acessórios</label>
+      <input id="acessorios" required />
+      <label>Observações</label>
+      <textarea id="observacoes"></textarea>
+      <label>Fotos (até 5)</label>
+      <input id="fotos" type="file" accept="image/*" multiple />
+
+      <div style="margin-top:12px">
+        <button type="submit">Enviar</button>
+      </div>
+    </form>
+
+    <h2>Resposta</h2>
+    <pre id="output">Nenhuma resposta ainda.</pre>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const output = document.getElementById('output');
+    const API = new URLSearchParams(location.search).get('api') || 'http://localhost:5000/termo';
+
+    async function fileToBase64(file){
+      return await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(r.result);
+        r.onerror=err=>rej(err);
+        r.readAsDataURL(file);
+      });
+    }
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      output.textContent = 'Enviando...';
+      try{
+        const fotosInput = document.getElementById('fotos');
+        const files = Array.from(fotosInput.files).slice(0,5);
+        const fotos = [];
+        for(const f of files){ fotos.push(await fileToBase64(f)); }
+
+        const payload = {
+          type: document.getElementById('type').value,
+          matricula: document.getElementById('matricula').value,
+          nome: document.getElementById('nome').value,
+          equipamento: { tipo: document.getElementById('equipTipo').value, modelo: document.getElementById('equipModelo').value, serial: document.getElementById('equipSerial').value },
+          acessorios: document.getElementById('acessorios').value,
+          observacoes: document.getElementById('observacoes').value,
+          fotos: fotos,
+          incidentNumber: null
+        };
+
+        const res = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      }catch(err){
+        output.textContent = 'Erro: ' + (err.message || err);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -21,6 +21,7 @@ namespace InstallerPanel
         public string Args { get; set; } = string.Empty;
         public DateTime DateUploaded { get; set; } = DateTime.MinValue;
         public string Version { get; set; } = string.Empty;
+        public bool Installed { get; set; } = false;
     }
 
     public class MainForm : Form
@@ -167,15 +168,19 @@ namespace InstallerPanel
             var btnRename = new Button { Left = btnRemove.Left + btnWidth + gap, Top = btnTop, Width = btnWidth, Text = "Renomear" };
             btnRename.Click += (s,e)=> RenameSelected();
             Controls.Add(btnRename);
+            var btnUploadFolder = new Button { Left = startX, Top = btnTop + 30, Width = btnWidth, Text = "Upload Pasta" };
+            btnUploadFolder.Click += async (s,e) => await UploadFolder();
+            Controls.Add(btnUploadFolder);
             // ajustar listView para preencher a largura disponível menos padding
             int listLeft = this.Padding.Left;
-            int listTop = 130;
+            int listTop = 162;
             int listWidth = this.ClientSize.Width - this.Padding.Left - this.Padding.Right - 20;
             int listHeight = this.ClientSize.Height - listTop - this.Padding.Bottom - 20;
             listView = new ListView { Left = listLeft, Top = listTop, Width = listWidth, Height = listHeight, View = View.Details, CheckBoxes = true, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
-            listView.Columns.Add("Aplicação", 300);
-            listView.Columns.Add("Data Upload", 240);
-            listView.Columns.Add("Versão", 120);
+            listView.Columns.Add("Aplicação", 230);
+            listView.Columns.Add("Data Upload", 160);
+            listView.Columns.Add("Versão", 100);
+            listView.Columns.Add("Concluído", 80);
             listView.FullRowSelect = true;
             Controls.Add(listView);
 
@@ -308,9 +313,18 @@ namespace InstallerPanel
 
         
 
+        private static string BuildSilentArgs(string exePath)
+        {
+            var ext = Path.GetExtension(exePath).ToLowerInvariant();
+            if (ext == ".msi") return "/quiet /norestart";
+            if (ext == ".bat") return string.Empty;
+            return "/S /silent /quiet /norestart";
+        }
+
         private async Task InstallSelected()
         {
-            foreach (ListViewItem li in listView.CheckedItems)
+            var checkedItems = listView.CheckedItems.Cast<ListViewItem>().ToList();
+            foreach (ListViewItem li in checkedItems)
             {
                 var app = li.Tag as AppItem;
                 if (app == null) continue;
@@ -338,15 +352,37 @@ namespace InstallerPanel
                         continue;
                     }
 
-                    var psi = new ProcessStartInfo(exePath, app.Args) { UseShellExecute = true, Verb = "runas" };
-                    Process.Start(psi);
+                    var silentArgs = BuildSilentArgs(exePath);
+                    var finalArgs = string.IsNullOrWhiteSpace(app.Args) ? silentArgs : $"{silentArgs} {app.Args}";
+                    bool isMsi = Path.GetExtension(exePath).ToLowerInvariant() == ".msi";
+
+                    var workDir = Path.GetDirectoryName(exePath) ?? string.Empty;
+                    ProcessStartInfo psi;
+                    if (isMsi)
+                        psi = new ProcessStartInfo("msiexec.exe", $"/i \"{exePath}\" {finalArgs}") { UseShellExecute = true, Verb = "runas", WorkingDirectory = workDir };
+                    else if (Path.GetExtension(exePath).ToLowerInvariant() == ".bat")
+                        psi = new ProcessStartInfo("cmd.exe", $"/c \"{exePath}\"") { UseShellExecute = true, Verb = "runas", WorkingDirectory = workDir };
+                    else
+                        psi = new ProcessStartInfo(exePath, finalArgs) { UseShellExecute = true, Verb = "runas", WorkingDirectory = workDir };
+
+                    var proc = Process.Start(psi);
+                    if (proc != null)
+                    {
+                        await proc.WaitForExitAsync();
+                        app.Installed = true;
+                        if (li.SubItems.Count > 3)
+                            li.SubItems[3].Text = "✓";
+                        else
+                            li.SubItems.Add("✓");
+                    }
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Erro ao instalar {app?.Name}: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-            MessageBox.Show("Instalações iniciadas.", "Concluído", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            SaveLocalPackages();
+            MessageBox.Show("Instalações concluídas.", "Concluído", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void LoadLocalPackages()
@@ -402,7 +438,7 @@ namespace InstallerPanel
                 listView.BeginUpdate();
                 foreach (var a in apps)
                 {
-                    var li = new ListViewItem(new[] { a.Name, a.DateUploaded == DateTime.MinValue ? string.Empty : a.DateUploaded.ToString("g"), a.Version }) { Checked = false, Tag = a };
+                    var li = new ListViewItem(new[] { a.Name, a.DateUploaded == DateTime.MinValue ? string.Empty : a.DateUploaded.ToString("g"), a.Version, a.Installed ? "✓" : "" }) { Checked = false, Tag = a };
                     listView.Items.Add(li);
                 }
                 listView.EndUpdate();
@@ -461,6 +497,57 @@ namespace InstallerPanel
             LoadLocalPackages();
         }
 
+        private async Task UploadFolder()
+        {
+            using var dlg = new FolderBrowserDialog { Description = "Selecione a pasta do pacote (deve conter o arquivo .bat principal)" };
+            if (dlg.ShowDialog() != DialogResult.OK) return;
+
+            var sourceDir = dlg.SelectedPath;
+            var folderName = Path.GetFileName(sourceDir);
+            var destDir = Path.Combine(packagesDir, folderName);
+            int idx = 1;
+            while (Directory.Exists(destDir))
+            {
+                destDir = Path.Combine(packagesDir, folderName + "_" + idx);
+                idx++;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(destDir);
+                foreach (var file in Directory.GetFiles(sourceDir))
+                    File.Copy(file, Path.Combine(destDir, Path.GetFileName(file)));
+
+                var batFiles = Directory.GetFiles(destDir, "*.bat");
+                if (batFiles.Length == 0)
+                {
+                    MessageBox.Show("Nenhum arquivo .bat encontrado na pasta selecionada.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    Directory.Delete(destDir, true);
+                    return;
+                }
+
+                // Preferir arquivo que começa com _ (convenção _RunAsAdmin.bat)
+                var mainBat = batFiles.FirstOrDefault(f => Path.GetFileName(f).StartsWith("_")) ?? batFiles[0];
+
+                apps.Add(new AppItem
+                {
+                    Name = Path.GetFileNameWithoutExtension(mainBat),
+                    Url = mainBat,
+                    Args = string.Empty,
+                    DateUploaded = DateTime.Now,
+                    Version = string.Empty
+                });
+
+                SaveLocalPackages();
+                LoadLocalPackages();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao copiar pasta: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                try { if (Directory.Exists(destDir)) Directory.Delete(destDir, true); } catch { }
+            }
+        }
+
         private void RemoveSelected()
         {
             var toRemove = new List<AppItem>();
@@ -474,8 +561,14 @@ namespace InstallerPanel
             {
                 try
                 {
-                    if (!string.IsNullOrEmpty(ai.Url) && File.Exists(ai.Url) && Path.GetDirectoryName(ai.Url) == packagesDir)
-                        File.Delete(ai.Url);
+                    if (!string.IsNullOrEmpty(ai.Url) && File.Exists(ai.Url))
+                    {
+                        var parentDir = Path.GetDirectoryName(ai.Url) ?? string.Empty;
+                        if (string.Equals(parentDir, packagesDir, StringComparison.OrdinalIgnoreCase))
+                            File.Delete(ai.Url);
+                        else if (parentDir.StartsWith(packagesDir, StringComparison.OrdinalIgnoreCase) && Directory.Exists(parentDir))
+                            Directory.Delete(parentDir, true);
+                    }
                 }
                 catch { }
                 apps.RemoveAll(x => x.Url == ai.Url);
