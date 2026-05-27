@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
+using Microsoft.Identity.Client;
 
 namespace InstallerPanel
 {
@@ -46,6 +47,11 @@ namespace InstallerPanel
         {
             DefaultRequestHeaders = { { "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36" } }
         };
+
+        // MSAL - autenticação interativa Microsoft 365 / SharePoint Online
+        private static IPublicClientApplication? _msalApp;
+        private static string? _spBearerToken;
+        private static DateTime _spTokenExpiry = DateTime.MinValue;
 
         public MainForm()
         {
@@ -356,7 +362,21 @@ namespace InstallerPanel
                     {
                         var downloadUrl = NormalizeDownloadUrl(app.Url);
                         var temp = Path.Combine(Path.GetTempPath(), Path.GetFileName(new Uri(app.Url).LocalPath));
-                        var resp = await PublicHttpClient.GetAsync(downloadUrl);
+
+                        // Usar token MSAL em cache se disponível (SharePoint autenticado)
+                        HttpResponseMessage resp;
+                        if (_spBearerToken != null && DateTime.Now < _spTokenExpiry)
+                        {
+                            using var authClient = new HttpClient();
+                            authClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_spBearerToken}");
+                            authClient.DefaultRequestHeaders.Add("User-Agent",
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36");
+                            resp = await authClient.GetAsync(downloadUrl);
+                        }
+                        else
+                        {
+                            resp = await PublicHttpClient.GetAsync(downloadUrl);
+                        }
                         resp.EnsureSuccessStatusCode();
                         using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
@@ -645,7 +665,11 @@ namespace InstallerPanel
         {
             var current = GetRemoteUrl();
             var url = Prompt.ShowDialog(
-                "Cole a URL do packages.json remoto (SharePoint, OneDrive, GitHub, etc.):",
+                "Cole a URL ou caminho do packages.json remoto.\n" +
+                "Exemplos:\n" +
+                "• %USERPROFILE%\\OneDrive - Comgas\\FieldServices\\packages.json\n" +
+                "• \\\\servidor\\pasta\\packages.json\n" +
+                "• https://raw.githubusercontent.com/.../packages.json",
                 "Configurar URL Remota", current);
             if (!string.IsNullOrWhiteSpace(url))
             {
@@ -668,16 +692,6 @@ namespace InstallerPanel
             try
             {
                 string json = await DownloadTextAsync(NormalizeDownloadUrl(url));
-
-                if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
-                    throw new InvalidOperationException(
-                        "O servidor retornou HTML em vez de JSON.\n\n" +
-                        "O app tenta autenticação automática com seu usuário Windows, mas o SharePoint pode ter bloqueado.\n\n" +
-                        "Alternativas que funcionam sem depender de permissão de 'Qualquer pessoa':\n" +
-                        "• Caminho de rede: \\\\servidor\\pasta\\packages.json\n" +
-                        "• OneDrive sincronizado: C:\\Users\\...\\OneDrive - Comgas\\packages.json\n" +
-                        "• URL raw do GitHub (repositório público)\n\n" +
-                        "Configure via '⚙ Configurar URL'.");
 
                 var remoteList = JsonSerializer.Deserialize<List<AppItem>>(json);
                 if (remoteList == null || remoteList.Count == 0)
@@ -702,14 +716,17 @@ namespace InstallerPanel
             }
         }
 
-        // Tenta baixar texto: primeiro sem credenciais (links públicos), depois com credenciais Windows
-        private static async Task<string> DownloadTextAsync(string url)
+        // Tenta baixar texto: público → Windows → login Microsoft
+        private async Task<string> DownloadTextAsync(string url)
         {
+            // Expandir variáveis de ambiente: %USERPROFILE%, %OneDrive%, etc.
+            url = Environment.ExpandEnvironmentVariables(url);
+
             // Caminho local ou de rede
             if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 return await File.ReadAllTextAsync(url);
 
-            // Tentativa 1: sem credenciais (SharePoint "Qualquer pessoa", GitHub, etc.)
+            // Tentativa 1: sem credenciais (links públicos / GitHub raw)
             try
             {
                 var resp = await PublicHttpClient.GetAsync(url);
@@ -721,18 +738,95 @@ namespace InstallerPanel
             }
             catch { }
 
-            // Tentativa 2: com credenciais Windows (SharePoint "Pessoas da organização" via ADFS)
-            using var handler = new HttpClientHandler
+            // Tentativa 2: credenciais Windows (ADFS on-prem)
+            try
             {
-                UseDefaultCredentials = true,
-                AllowAutoRedirect = true
-            };
-            using var client = new HttpClient(handler);
-            client.DefaultRequestHeaders.Add("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36");
-            var resp2 = await client.GetAsync(url);
-            resp2.EnsureSuccessStatusCode();
-            return await resp2.Content.ReadAsStringAsync();
+                using var handler = new HttpClientHandler { UseDefaultCredentials = true, AllowAutoRedirect = true };
+                using var client = new HttpClient(handler);
+                client.DefaultRequestHeaders.Add("User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36");
+                var resp2 = await client.GetAsync(url);
+                if (resp2.IsSuccessStatusCode)
+                {
+                    var text2 = await resp2.Content.ReadAsStringAsync();
+                    if (!text2.TrimStart().StartsWith("<")) return text2;
+                }
+            }
+            catch { }
+
+            // Tentativa 3: login Microsoft 365 interativo (SharePoint Online corporativo)
+            if (url.Contains(".sharepoint.com") || url.Contains("sharepoint.com"))
+            {
+                var token = await GetSharePointTokenAsync(url);
+                if (token != null)
+                {
+                    using var authClient = new HttpClient();
+                    authClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+                    authClient.DefaultRequestHeaders.Add("User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36");
+                    var resp3 = await authClient.GetAsync(url);
+                    resp3.EnsureSuccessStatusCode();
+                    return await resp3.Content.ReadAsStringAsync();
+                }
+            }
+
+            throw new InvalidOperationException(
+                "Não foi possível acessar o arquivo remoto após todas as tentativas de autenticação.");
+        }
+
+        private async Task<string?> GetSharePointTokenAsync(string sharePointUrl)
+        {
+            // Retornar token em cache se ainda válido
+            if (_spBearerToken != null && DateTime.Now < _spTokenExpiry)
+                return _spBearerToken;
+
+            // Extrair tenant do URL: https://comgascloud.sharepoint.com → escopo
+            var uri = new Uri(sharePointUrl);
+            var tenantUrl = $"{uri.Scheme}://{uri.Host}";
+            var scopes = new[] { $"{tenantUrl}/AllSites.Read" };
+
+            _msalApp ??= PublicClientApplicationBuilder
+                .Create("31359c7f-bd7e-475c-86db-fdb8c937548e") // PnP Management Shell (acesso SharePoint)
+                .WithAuthority("https://login.microsoftonline.com/common")
+                .WithRedirectUri("http://localhost")
+                .Build();
+
+            // Tentar renovar silenciosamente com conta já logada
+            try
+            {
+                var accounts = await _msalApp.GetAccountsAsync();
+                var silent = await _msalApp.AcquireTokenSilent(scopes, accounts.FirstOrDefault())
+                    .ExecuteAsync();
+                _spBearerToken = silent.AccessToken;
+                _spTokenExpiry = silent.ExpiresOn.UtcDateTime.ToLocalTime().AddMinutes(-5);
+                return _spBearerToken;
+            }
+            catch { }
+
+            // Login interativo — abre janela de login da Microsoft
+            var confirm = MessageBox.Show(
+                "Esta URL requer autenticação no SharePoint.\n\n" +
+                "Será aberta a janela de login da Microsoft.\n" +
+                "Entre com a conta que tem acesso ao SharePoint da Comgas.",
+                "Login necessário", MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+
+            if (confirm != DialogResult.OK) return null;
+
+            try
+            {
+                var result = await _msalApp.AcquireTokenInteractive(scopes)
+                    .WithParentActivityOrWindow(this.Handle)
+                    .ExecuteAsync();
+                _spBearerToken = result.AccessToken;
+                _spTokenExpiry = result.ExpiresOn.UtcDateTime.ToLocalTime().AddMinutes(-5);
+                return _spBearerToken;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Falha no login: {ex.Message}", "Erro de autenticação",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return null;
+            }
         }
 
         private void RemoveSelected()

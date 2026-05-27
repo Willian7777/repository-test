@@ -24,6 +24,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.61.3" />
+  </ItemGroup>
+
   <!-- Auto-increment installer version file on each build using PowerShell (works on Windows) -->
   <Target Name="BumpInstallerVersion" BeforeTargets="BeforeBuild">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -NonInteractive -File &quot;$(MSBuildProjectDirectory)\bump_version.ps1&quot;" />
