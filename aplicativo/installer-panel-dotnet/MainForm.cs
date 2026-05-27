@@ -193,6 +193,9 @@ namespace InstallerPanel
             var btnConfigUrl = new Button { Left = startX + (btnWidth + gap) * 2, Top = btnTop + 30, Width = btnWidth, Text = "⚙ Configurar URL" };
             btnConfigUrl.Click += (s,e) => ConfigureRemoteUrl();
             Controls.Add(btnConfigUrl);
+            var btnBrowseJson = new Button { Left = startX + (btnWidth + gap) * 3, Top = btnTop + 30, Width = btnWidth, Text = "📂 Procurar JSON" };
+            btnBrowseJson.Click += async (s, e) => await BrowseAndSyncJson();
+            Controls.Add(btnBrowseJson);
             // ajustar listView para preencher a largura disponível menos padding
             int listLeft = this.Padding.Left;
             int listTop = 162;
@@ -714,6 +717,34 @@ namespace InstallerPanel
                 MessageBox.Show($"Erro ao sincronizar: {ex.Message}", "Erro",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private async Task BrowseAndSyncJson()
+        {
+            // Detectar pastas OneDrive disponíveis para sugerir diretório inicial
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var initialDir = userProfile;
+            try
+            {
+                var oneDriveDirs = Directory.GetDirectories(userProfile, "OneDrive*");
+                if (oneDriveDirs.Length > 0)
+                    initialDir = oneDriveDirs[0]; // Abrir na primeira pasta OneDrive encontrada
+            }
+            catch { }
+
+            using var dlg = new OpenFileDialog
+            {
+                Title = "Selecione o arquivo packages.json remoto",
+                Filter = "JSON (*.json)|*.json|Todos os arquivos (*.*)|*.*",
+                InitialDirectory = initialDir,
+                FileName = "packages.json"
+            };
+
+            if (dlg.ShowDialog() != DialogResult.OK) return;
+
+            var path = dlg.FileName;
+            try { File.WriteAllText(remoteConfigPath, path); } catch { }
+            await SyncFromRemote();
         }
 
         // Tenta baixar texto: público → Windows → login Microsoft
