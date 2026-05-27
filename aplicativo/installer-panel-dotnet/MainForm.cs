@@ -780,53 +780,102 @@ namespace InstallerPanel
             if (_spBearerToken != null && DateTime.Now < _spTokenExpiry)
                 return _spBearerToken;
 
-            // Extrair tenant do URL: https://comgascloud.sharepoint.com → escopo
             var uri = new Uri(sharePointUrl);
             var tenantUrl = $"{uri.Scheme}://{uri.Host}";
             var scopes = new[] { $"{tenantUrl}/AllSites.Read" };
 
-            _msalApp ??= PublicClientApplicationBuilder
-                .Create("31359c7f-bd7e-475c-86db-fdb8c937548e") // PnP Management Shell (acesso SharePoint)
-                .WithAuthority("https://login.microsoftonline.com/common")
-                .WithRedirectUri("http://localhost")
-                .Build();
-
-            // Tentar renovar silenciosamente com conta já logada
-            try
+            // Loop para permitir troca de Client ID sem reiniciar
+            for (int attempt = 0; attempt < 2; attempt++)
             {
-                var accounts = await _msalApp.GetAccountsAsync();
-                var silent = await _msalApp.AcquireTokenSilent(scopes, accounts.FirstOrDefault())
-                    .ExecuteAsync();
-                _spBearerToken = silent.AccessToken;
-                _spTokenExpiry = silent.ExpiresOn.UtcDateTime.ToLocalTime().AddMinutes(-5);
-                return _spBearerToken;
+                var clientId = GetMsalClientId();
+                _msalApp = PublicClientApplicationBuilder
+                    .Create(clientId)
+                    .WithAuthority("https://login.microsoftonline.com/common")
+                    .WithRedirectUri("http://localhost")
+                    .Build();
+
+                // Tentar silencioso com conta já logada
+                try
+                {
+                    var accounts = await _msalApp.GetAccountsAsync();
+                    var silent = await _msalApp.AcquireTokenSilent(scopes, accounts.FirstOrDefault()).ExecuteAsync();
+                    _spBearerToken = silent.AccessToken;
+                    _spTokenExpiry = silent.ExpiresOn.UtcDateTime.ToLocalTime().AddMinutes(-5);
+                    return _spBearerToken;
+                }
+                catch { }
+
+                // Login interativo
+                var confirm = MessageBox.Show(
+                    "Esta URL requer autenticação no SharePoint.\n\n" +
+                    "Será aberta a janela de login da Microsoft.\n" +
+                    "Entre com a conta que tem acesso ao SharePoint da Comgas.",
+                    "Login necessário", MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+
+                if (confirm != DialogResult.OK) return null;
+
+                try
+                {
+                    var result = await _msalApp.AcquireTokenInteractive(scopes)
+                        .WithParentActivityOrWindow(this.Handle)
+                        .ExecuteAsync();
+                    _spBearerToken = result.AccessToken;
+                    _spTokenExpiry = result.ExpiresOn.UtcDateTime.ToLocalTime().AddMinutes(-5);
+                    return _spBearerToken;
+                }
+                catch (MsalServiceException msalEx) when (msalEx.Message.Contains("AADSTS700016"))
+                {
+                    // App não autorizado no tenant — pedir Client ID personalizado
+                    var msg =
+                        "O aplicativo não está autorizado no tenant da Comgas (AADSTS700016).\n\n" +
+                        "O administrador de TI precisa registrar um app no Azure AD.\n\n" +
+                        "Passos para o admin (portal.azure.com):\n" +
+                        "  1. Azure Active Directory → Registros de aplicativos\n" +
+                        "  2. Novo registro → nome: 'Instalador Comgas' → tipo: Público (mobile/desktop)\n" +
+                        "  3. Permissões de API → SharePoint → Sites.Read.All (delegada)\n" +
+                        "  4. Conceder consentimento do administrador\n" +
+                        "  5. Copiar o 'ID do aplicativo (cliente)'\n\n" +
+                        "Deseja inserir o Client ID agora?";
+
+                    if (MessageBox.Show(msg, "Autorização necessária",
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                    {
+                        var newId = Prompt.ShowDialog("Cole o Client ID do Azure AD:", "Client ID personalizado", clientId);
+                        if (!string.IsNullOrWhiteSpace(newId))
+                        {
+                            SaveMsalClientId(newId.Trim());
+                            continue; // Tentar novamente com o novo Client ID
+                        }
+                    }
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Falha no login: {ex.Message}", "Erro de autenticação",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return null;
+                }
             }
-            catch { }
+            return null;
+        }
 
-            // Login interativo — abre janela de login da Microsoft
-            var confirm = MessageBox.Show(
-                "Esta URL requer autenticação no SharePoint.\n\n" +
-                "Será aberta a janela de login da Microsoft.\n" +
-                "Entre com a conta que tem acesso ao SharePoint da Comgas.",
-                "Login necessário", MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+        private string GetMsalConfigPath() =>
+            Path.Combine(Path.GetDirectoryName(packagesJsonPath)!, "msal.config");
 
-            if (confirm != DialogResult.OK) return null;
-
-            try
+        private string GetMsalClientId()
+        {
+            var path = GetMsalConfigPath();
+            if (File.Exists(path))
             {
-                var result = await _msalApp.AcquireTokenInteractive(scopes)
-                    .WithParentActivityOrWindow(this.Handle)
-                    .ExecuteAsync();
-                _spBearerToken = result.AccessToken;
-                _spTokenExpiry = result.ExpiresOn.UtcDateTime.ToLocalTime().AddMinutes(-5);
-                return _spBearerToken;
+                var saved = File.ReadAllText(path).Trim();
+                if (!string.IsNullOrEmpty(saved)) return saved;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Falha no login: {ex.Message}", "Erro de autenticação",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return null;
-            }
+            return "31359c7f-bd7e-475c-86db-fdb8c937548e"; // PnP Management Shell (padrão)
+        }
+
+        private void SaveMsalClientId(string clientId)
+        {
+            try { File.WriteAllText(GetMsalConfigPath(), clientId); } catch { }
         }
 
         private void RemoveSelected()
