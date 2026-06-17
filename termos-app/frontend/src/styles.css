@@ -1,8 +1,0 @@
-body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;padding:20px}
-.container{max-width:800px;margin:0 auto;background:#fff;padding:20px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
-.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.form label{grid-column:span 2;margin-top:6px}
-.form input,.form textarea,.form select{grid-column:span 2;padding:8px;border:1px solid #ddd;border-radius:4px}
-.form button{grid-column:span 2;padding:10px;background:#0078d4;color:#fff;border:none;border-radius:4px;cursor:pointer}
-.result{margin-top:16px;background:#f0f8ff;padding:12px;border-radius:4px}
-@media(max-width:600px){.form{grid-template-columns:1fr}.form label,.form input,.form textarea,.form select,.form button{grid-column:span 1}}

@@ -33,8 +33,6 @@ namespace InstallerPanel
         private Button btnInstall;
         
         private List<AppItem> apps = new();
-        private Button btnUpload;
-        private Button btnRemove;
         private readonly string packagesDir;
         private readonly string packagesJsonPath;
         private readonly string remoteConfigPath;
@@ -46,6 +44,14 @@ namespace InstallerPanel
             new HttpClientHandler { AllowAutoRedirect = true })
         {
             DefaultRequestHeaders = { { "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36" } }
+        };
+
+        // Opções JSON tolerantes: aceita vírgula no final e comentários
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            AllowTrailingCommas = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            PropertyNameCaseInsensitive = true
         };
 
         // MSAL - autenticação interativa Microsoft 365 / SharePoint Online
@@ -61,6 +67,12 @@ namespace InstallerPanel
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.Padding = new Padding(12);
 
+            // inicializar caminhos antes do carregamento da UI
+            packagesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "packages");
+            packagesJsonPath = Path.Combine(packagesDir, "packages.json");
+            remoteConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "remote.config");
+            Directory.CreateDirectory(packagesDir);
+
             // topo limpo: logo acima dos botões
             var pictureBox = new PictureBox { Left = 10, Top = 10, Width = 160, Height = 60, SizeMode = PictureBoxSizeMode.Zoom, Anchor = AnchorStyles.Top | AnchorStyles.Left, BackColor = Color.Transparent };
             try
@@ -75,7 +87,7 @@ namespace InstallerPanel
                 }
                 if (embedded != null)
                 {
-                    SetPictureBoxImage(pictureBox, embedded);
+                    pictureBox.Image = embedded;
                 }
                 else
                 {
@@ -98,7 +110,7 @@ namespace InstallerPanel
                             img = processed;
                         }
                         else img = cachedImg;
-                        SetPictureBoxImage(pictureBox, img);
+                        pictureBox.Image = img;
                     }
                 }
             }
@@ -132,7 +144,7 @@ namespace InstallerPanel
                 foreach (var c in candidates)
                 {
                     var p = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, c);
-                    if (!File.Exists(p)) p = Path.Combine(packagesDir ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "packages"), c);
+                    if (!File.Exists(p)) p = Path.Combine(packagesDir, c);
                     if (File.Exists(p)) found.Add(p);
                 }
                 if (found.Count == 1 && pictureBox.Image == null)
@@ -161,8 +173,8 @@ namespace InstallerPanel
             int btnWidth = 160;
             int gap = 20;
 
-            btnInstall = new Button { Left = startX, Top = btnTop, Width = btnWidth, Text = "Instalar selecionados" };
-            btnInstall.Click += async (s,e)=> await InstallSelected();
+            btnInstall = new Button { Left = startX, Top = btnTop, Width = btnWidth, Text = "Instalar" };
+            btnInstall.Click += async (s, e) => await InstallSelected();
             Controls.Add(btnInstall);
             // garantir que o pictureBox fique acima do botão Instalar
             try
@@ -171,31 +183,24 @@ namespace InstallerPanel
                 pictureBox.Top = btnInstall.Top - pictureBox.Height - 6;
             }
             catch { }
-            btnUpload = new Button { Left = btnInstall.Left + btnWidth + gap, Top = btnTop, Width = btnWidth, Text = "Upload" };
-            btnUpload.Click += async (s,e)=> await UploadFiles();
-            // Mostrar Upload sempre (única versão).
-            btnUpload.Visible = true;
-            btnUpload.Enabled = true;
-            Controls.Add(btnUpload);
-
-            btnRemove = new Button { Left = btnUpload.Left + btnWidth + gap, Top = btnTop, Width = btnWidth, Text = "Remover" };
-            btnRemove.Click += (s,e)=> RemoveSelected();
-            Controls.Add(btnRemove);
-            var btnRename = new Button { Left = btnRemove.Left + btnWidth + gap, Top = btnTop, Width = btnWidth, Text = "Renomear" };
-            btnRename.Click += (s,e)=> RenameSelected();
-            Controls.Add(btnRename);
-            var btnUploadFolder = new Button { Left = startX, Top = btnTop + 30, Width = btnWidth, Text = "Upload Pasta" };
-            btnUploadFolder.Click += async (s,e) => await UploadFolder();
+            var btnUploadFolder = new Button { Left = startX + btnWidth + gap, Top = btnTop, Width = btnWidth, Text = "Upload Pasta" };
+            btnUploadFolder.Click += async (s, e) => await UploadFolder();
             Controls.Add(btnUploadFolder);
-            var btnSync = new Button { Left = startX + btnWidth + gap, Top = btnTop + 30, Width = btnWidth, Text = "↻ Sincronizar" };
-            btnSync.Click += async (s,e) => await SyncFromRemote();
+            var btnSync = new Button { Left = startX + (btnWidth + gap) * 2, Top = btnTop, Width = btnWidth, Text = "↻ Sincronizar" };
+            btnSync.Click += async (s, e) => await SyncFromRemote();
             Controls.Add(btnSync);
-            var btnConfigUrl = new Button { Left = startX + (btnWidth + gap) * 2, Top = btnTop + 30, Width = btnWidth, Text = "⚙ Configurar URL" };
-            btnConfigUrl.Click += (s,e) => ConfigureRemoteUrl();
+            var btnConfigUrl = new Button { Left = startX + (btnWidth + gap) * 3, Top = btnTop, Width = btnWidth, Text = "⚙ Configurar URL" };
+            btnConfigUrl.Click += (s, e) => ConfigureRemoteUrl();
             Controls.Add(btnConfigUrl);
-            var btnBrowseJson = new Button { Left = startX + (btnWidth + gap) * 3, Top = btnTop + 30, Width = btnWidth, Text = "📂 Procurar JSON" };
+            var btnBrowseJson = new Button { Left = startX, Top = btnTop + 30, Width = btnWidth, Text = "📂 Procurar JSON" };
             btnBrowseJson.Click += async (s, e) => await BrowseAndSyncJson();
             Controls.Add(btnBrowseJson);
+            var btnLinkFolder = new Button { Left = startX + btnWidth + gap, Top = btnTop + 30, Width = btnWidth, Text = "🔗 Vincular Pasta" };
+            btnLinkFolder.Click += (s, e) => LinkFolder();
+            Controls.Add(btnLinkFolder);
+            var btnAddUrl = new Button { Left = startX + (btnWidth + gap) * 2, Top = btnTop + 30, Width = btnWidth, Text = "🌐 Adicionar URL" };
+            btnAddUrl.Click += (s, e) => AddByUrl();
+            Controls.Add(btnAddUrl);
             // ajustar listView para preencher a largura disponível menos padding
             int listLeft = this.Padding.Left;
             int listTop = 162;
@@ -209,11 +214,6 @@ namespace InstallerPanel
             listView.FullRowSelect = true;
             Controls.Add(listView);
 
-            packagesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "packages");
-            packagesJsonPath = Path.Combine(packagesDir, "packages.json");
-            remoteConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "remote.config");
-            Directory.CreateDirectory(packagesDir);
-            // carregar pacotes locais ao iniciar
             LoadLocalPackages();
         }
 
@@ -241,18 +241,6 @@ namespace InstallerPanel
             }
             catch { }
             return null;
-        }
-
-        private void SetPictureBoxImage(PictureBox pb, Image img)
-        {
-            try
-            {
-                pb.Image = img;
-            }
-            catch
-            {
-                pb.Image = img;
-            }
         }
 
         private Image MakeBackgroundTransparent(Image src, Color bgColor, int tolerance)
@@ -363,28 +351,10 @@ namespace InstallerPanel
                     }
                     else if (!string.IsNullOrEmpty(app.Url) && Uri.IsWellFormedUriString(app.Url, UriKind.Absolute))
                     {
-                        var downloadUrl = NormalizeDownloadUrl(app.Url);
-                        var temp = Path.Combine(Path.GetTempPath(), Path.GetFileName(new Uri(app.Url).LocalPath));
-
-                        // Usar token MSAL em cache se disponível (SharePoint autenticado)
-                        HttpResponseMessage resp;
-                        if (_spBearerToken != null && DateTime.Now < _spTokenExpiry)
-                        {
-                            using var authClient = new HttpClient();
-                            authClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_spBearerToken}");
-                            authClient.DefaultRequestHeaders.Add("User-Agent",
-                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36");
-                            resp = await authClient.GetAsync(downloadUrl);
-                        }
-                        else
-                        {
-                            resp = await PublicHttpClient.GetAsync(downloadUrl);
-                        }
-                        resp.EnsureSuccessStatusCode();
-                        using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
-                        {
-                            await resp.Content.CopyToAsync(fs);
-                        }
+                        var fileName = Path.GetFileName(new Uri(app.Url).LocalPath);
+                        if (string.IsNullOrEmpty(fileName)) fileName = "download.tmp";
+                        var temp = Path.Combine(Path.GetTempPath(), fileName);
+                        await DownloadFileAsync(app.Url, temp);
                         exePath = temp;
                     }
                     else
@@ -393,8 +363,9 @@ namespace InstallerPanel
                         continue;
                     }
 
+                    var ext = Path.GetExtension(exePath).ToLowerInvariant();
                     // Extrair ZIP (ex: driver .bat + arquivos complementares)
-                    if (Path.GetExtension(exePath).ToLowerInvariant() == ".zip")
+                    if (ext == ".zip")
                     {
                         var extractDir = Path.Combine(Path.GetTempPath(), "InstallerPanel_" + Path.GetFileNameWithoutExtension(exePath));
                         if (Directory.Exists(extractDir)) Directory.Delete(extractDir, true);
@@ -415,13 +386,13 @@ namespace InstallerPanel
 
                     var silentArgs = BuildSilentArgs(exePath);
                     var finalArgs = string.IsNullOrWhiteSpace(app.Args) ? silentArgs : $"{silentArgs} {app.Args}";
-                    bool isMsi = Path.GetExtension(exePath).ToLowerInvariant() == ".msi";
+                    bool isMsi = ext == ".msi";
 
                     var workDir = Path.GetDirectoryName(exePath) ?? string.Empty;
                     ProcessStartInfo psi;
                     if (isMsi)
                         psi = new ProcessStartInfo("msiexec.exe", $"/i \"{exePath}\" {finalArgs}") { UseShellExecute = true, Verb = "runas", WorkingDirectory = workDir };
-                    else if (Path.GetExtension(exePath).ToLowerInvariant() == ".bat")
+                    else if (ext == ".bat")
                         psi = new ProcessStartInfo("cmd.exe", $"/c \"{exePath}\"") { UseShellExecute = true, Verb = "runas", WorkingDirectory = workDir };
                     else
                         psi = new ProcessStartInfo(exePath, finalArgs) { UseShellExecute = true, Verb = "runas", WorkingDirectory = workDir };
@@ -458,7 +429,7 @@ namespace InstallerPanel
                     try
                     {
                         var js = File.ReadAllText(packagesJsonPath);
-                        var list = JsonSerializer.Deserialize<List<AppItem>>(js);
+                        var list = JsonSerializer.Deserialize<List<AppItem>>(js, _jsonOptions);
                         if (list != null && list.Count > 0)
                         {
                             apps.AddRange(list);
@@ -558,33 +529,83 @@ namespace InstallerPanel
             }
         }
 
-        private async Task UploadFiles()
+        private void AddByUrl()
         {
-            using var dlg = new OpenFileDialog { Multiselect = true };
+            var url = Prompt.ShowDialog(
+                "Cole a URL do arquivo (ZIP, EXE, MSI) ou pasta (SharePoint, GitHub, servidor):\n" +
+                "Exemplos:\n" +
+                "\u2022 https://comgascloud.sharepoint.com/:u:/...\n" +
+                "\u2022 https://raw.githubusercontent.com/.../app.zip\n" +
+                "\u2022 \\\\\\\\servidor\\\\pasta\\\\instalador.zip",
+                "Adicionar por URL", "");
+
+            if (string.IsNullOrWhiteSpace(url)) return;
+            url = url.Trim();
+
+            string suggestedName;
+            try
+            {
+                var localPath = Uri.IsWellFormedUriString(url, UriKind.Absolute)
+                    ? new Uri(url).LocalPath
+                    : url;
+                suggestedName = Path.GetFileNameWithoutExtension(localPath);
+            }
+            catch { suggestedName = url; }
+
+            var name = Prompt.ShowDialog("Nome exibido na lista:", "Nome do aplicativo", suggestedName);
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            apps.Add(new AppItem
+            {
+                Name = name.Trim(),
+                Url = url,
+                Args = string.Empty,
+                DateUploaded = DateTime.Now,
+                Version = string.Empty,
+                IsRemote = true
+            });
+
+            SaveLocalPackages();
+            LoadLocalPackages();
+        }
+
+        private void LinkFolder()
+        {
+            // Detectar pasta OneDrive para abrir como ponto de partida
+            string startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            try
+            {
+                var oneDriveDir = Directory.GetDirectories(startPath)
+                    .FirstOrDefault(d => Path.GetFileName(d).StartsWith("OneDrive", StringComparison.OrdinalIgnoreCase));
+                if (oneDriveDir != null) startPath = oneDriveDir;
+            }
+            catch { }
+
+            using var dlg = new FolderBrowserDialog
+            {
+                Description = "Selecione a pasta do pacote (deve conter o arquivo .bat principal)",
+                InitialDirectory = startPath
+            };
             if (dlg.ShowDialog() != DialogResult.OK) return;
 
-            foreach (var f in dlg.FileNames)
+            var sourceDir = dlg.SelectedPath;
+            var batFiles = Directory.GetFiles(sourceDir, "*.bat");
+            if (batFiles.Length == 0)
             {
-                try
-                {
-                    var dest = Path.Combine(packagesDir, Path.GetFileName(f));
-                    var destUnique = dest;
-                    int i = 1;
-                    while (File.Exists(destUnique))
-                    {
-                        destUnique = Path.Combine(packagesDir, Path.GetFileNameWithoutExtension(f) + "_" + i + Path.GetExtension(f));
-                        i++;
-                    }
-                    File.Copy(f, destUnique);
-                    var ver = string.Empty;
-                    try { var fv = FileVersionInfo.GetVersionInfo(destUnique); ver = fv.FileVersion ?? fv.ProductVersion ?? string.Empty; } catch { }
-                    apps.Add(new AppItem { Name = Path.GetFileName(destUnique), Url = destUnique, Args = string.Empty, DateUploaded = DateTime.Now, Version = ver });
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Falha ao copiar {f}: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                MessageBox.Show("Nenhum arquivo .bat encontrado na pasta selecionada.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
+
+            var mainBat = batFiles.FirstOrDefault(f => Path.GetFileName(f).StartsWith("_")) ?? batFiles[0];
+
+            apps.Add(new AppItem
+            {
+                Name = Path.GetFileNameWithoutExtension(mainBat),
+                Url = mainBat,
+                Args = string.Empty,
+                DateUploaded = DateTime.Now,
+                Version = string.Empty
+            });
 
             SaveLocalPackages();
             LoadLocalPackages();
@@ -696,7 +717,7 @@ namespace InstallerPanel
             {
                 string json = await DownloadTextAsync(NormalizeDownloadUrl(url));
 
-                var remoteList = JsonSerializer.Deserialize<List<AppItem>>(json);
+                var remoteList = JsonSerializer.Deserialize<List<AppItem>>(json, _jsonOptions);
                 if (remoteList == null || remoteList.Count == 0)
                 {
                     MessageBox.Show("Nenhum app encontrado na fonte remota.", "Aviso",
@@ -748,6 +769,76 @@ namespace InstallerPanel
         }
 
         // Tenta baixar texto: público → Windows → login Microsoft
+        // Download de arquivo binário com suporte a GitHub PAT, MSAL, Windows SSO e links públicos
+        private async Task DownloadFileAsync(string url, string destPath)
+        {
+            var downloadUrl = NormalizeDownloadUrl(url);
+            bool isGitHub = url.Contains("github.com", StringComparison.OrdinalIgnoreCase) ||
+                            url.Contains("raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase);
+
+            // Tentativa 1: GitHub PAT (repositórios privados)
+            if (isGitHub)
+            {
+                var pat = TryGetGitHubPat();
+                if (pat != null)
+                {
+                    try
+                    {
+                        using var ghClient = new HttpClient();
+                        ghClient.DefaultRequestHeaders.Add("Authorization", $"token {pat}");
+                        ghClient.DefaultRequestHeaders.Add("User-Agent", "InstallerPanel/1.0");
+                        var r = await ghClient.GetAsync(downloadUrl);
+                        if (r.IsSuccessStatusCode)
+                        {
+                            using var fs = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                            await r.Content.CopyToAsync(fs);
+                            return;
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            // Tentativa 2: token MSAL em cache (SharePoint autenticado)
+            if (_spBearerToken != null && DateTime.Now < _spTokenExpiry)
+            {
+                try
+                {
+                    using var authClient = new HttpClient();
+                    authClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_spBearerToken}");
+                    authClient.DefaultRequestHeaders.Add("User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36");
+                    var r = await authClient.GetAsync(downloadUrl);
+                    if (r.IsSuccessStatusCode)
+                    {
+                        using var fs = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                        await r.Content.CopyToAsync(fs);
+                        return;
+                    }
+                }
+                catch { }
+            }
+
+            // Tentativa 3: credenciais Windows (SSO corporativo / ADFS domínio)
+            try
+            {
+                var r = await SharedHttpClient.GetAsync(downloadUrl);
+                if (r.IsSuccessStatusCode)
+                {
+                    using var fs = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
+                    await r.Content.CopyToAsync(fs);
+                    return;
+                }
+            }
+            catch { }
+
+            // Tentativa 4: sem credenciais (links públicos / GitHub público)
+            var resp = await PublicHttpClient.GetAsync(downloadUrl);
+            resp.EnsureSuccessStatusCode();
+            using var fsPublic = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            await resp.Content.CopyToAsync(fsPublic);
+        }
+
         private async Task<string> DownloadTextAsync(string url)
         {
             // Expandir variáveis de ambiente: %USERPROFILE%, %OneDrive%, etc.
@@ -757,7 +848,32 @@ namespace InstallerPanel
             if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 return await File.ReadAllTextAsync(url);
 
-            // Tentativa 1: sem credenciais (links públicos / GitHub raw)
+            bool isGitHub = url.Contains("github.com", StringComparison.OrdinalIgnoreCase) ||
+                            url.Contains("raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase);
+
+            // Tentativa 1: GitHub PAT (repositórios privados)
+            if (isGitHub)
+            {
+                var pat = TryGetGitHubPat();
+                if (pat != null)
+                {
+                    try
+                    {
+                        using var ghClient = new HttpClient();
+                        ghClient.DefaultRequestHeaders.Add("Authorization", $"token {pat}");
+                        ghClient.DefaultRequestHeaders.Add("User-Agent", "InstallerPanel/1.0");
+                        var r = await ghClient.GetAsync(url);
+                        if (r.IsSuccessStatusCode)
+                        {
+                            var text = await r.Content.ReadAsStringAsync();
+                            if (!text.TrimStart().StartsWith("<")) return text;
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            // Tentativa 2: sem credenciais (links públicos / GitHub raw público)
             try
             {
                 var resp = await PublicHttpClient.GetAsync(url);
@@ -772,11 +888,7 @@ namespace InstallerPanel
             // Tentativa 2: credenciais Windows (ADFS on-prem)
             try
             {
-                using var handler = new HttpClientHandler { UseDefaultCredentials = true, AllowAutoRedirect = true };
-                using var client = new HttpClient(handler);
-                client.DefaultRequestHeaders.Add("User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36");
-                var resp2 = await client.GetAsync(url);
+                var resp2 = await SharedHttpClient.GetAsync(url);
                 if (resp2.IsSuccessStatusCode)
                 {
                     var text2 = await resp2.Content.ReadAsStringAsync();
@@ -909,65 +1021,19 @@ namespace InstallerPanel
             try { File.WriteAllText(GetMsalConfigPath(), clientId); } catch { }
         }
 
-        private void RemoveSelected()
+        private string? TryGetGitHubPat()
         {
-            var toRemove = new List<AppItem>();
-            foreach (ListViewItem li in listView.CheckedItems)
+            try
             {
-                if (li.Tag is AppItem ai) toRemove.Add(ai);
-            }
-            if (toRemove.Count == 0) return;
-
-            foreach (var ai in toRemove)
-            {
-                try
+                var patFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "github.pat");
+                if (File.Exists(patFile))
                 {
-                    if (!string.IsNullOrEmpty(ai.Url) && File.Exists(ai.Url))
-                    {
-                        var parentDir = Path.GetDirectoryName(ai.Url) ?? string.Empty;
-                        if (string.Equals(parentDir, packagesDir, StringComparison.OrdinalIgnoreCase))
-                            File.Delete(ai.Url);
-                        else if (parentDir.StartsWith(packagesDir, StringComparison.OrdinalIgnoreCase) && Directory.Exists(parentDir))
-                            Directory.Delete(parentDir, true);
-                    }
+                    var pat = File.ReadAllText(patFile).Trim();
+                    if (!string.IsNullOrEmpty(pat)) return pat;
                 }
-                catch { }
-                apps.RemoveAll(x => x.Url == ai.Url);
             }
-            SaveLocalPackages();
-            LoadLocalPackages();
-        }
-
-        private void RenameSelected()
-        {
-            ListViewItem? li = null;
-            if (listView.SelectedItems.Count > 0)
-            {
-                li = listView.SelectedItems[0];
-            }
-            else if (listView.CheckedItems.Count == 1)
-            {
-                li = listView.CheckedItems[0];
-            }
-            else if (listView.CheckedItems.Count > 1)
-            {
-                MessageBox.Show("Selecione apenas um item (clicando no nome) ou desmarque até ficar um item marcado.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (li == null)
-            {
-                MessageBox.Show("Selecione um item para renomear.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (!(li.Tag is AppItem ai)) return;
-            var newName = Prompt.ShowDialog($"Novo nome para '{ai.Name}':", "Renomear aplicativo", ai.Name);
-            if (string.IsNullOrWhiteSpace(newName)) return;
-            // atualizar metadata e lista
-            ai.Name = newName;
-            SaveLocalPackages();
-            LoadLocalPackages();
+            catch { }
+            return null;
         }
 
         

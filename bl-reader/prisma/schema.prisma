@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Autenticação NextAuth ───────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── Usuário ────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("LEITORA") // "LEITORA" | "ADMIN"
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  compras        Compra[]
+  consentimentos ConsentimentoLGPD[]
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+// ─── LGPD: Registro de consentimento ────────────────────────────────────────
+// Obrigatório pela LGPD art. 7 e 9 — base legal para tratamento de dados
+
+model ConsentimentoLGPD {
+  id                       String   @id @default(cuid())
+  userId                   String
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aceitouTermos            Boolean
+  aceitouPrivacidade       Boolean
+  aceitouCookiesAnaliticos Boolean  @default(false)
+  ipHash                   String   // SHA-256 do IP — não é dado pessoal identificável diretamente
+  userAgent                String?
+  createdAt                DateTime @default(now())
+
+  @@map("consentimentos_lgpd")
+}
+
+// ─── LGPD: Log de auditoria ──────────────────────────────────────────────────
+// Rastreabilidade de operações sensíveis — LGPD art. 37
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  acao       String    // AcaoAudit: LOGIN | LOGOUT | COMPRA_INICIADA | etc.
+  entidade   String?   // ex: "Obra", "Compra"
+  entidadeId String?
+  ipHash     String?
+  metadata   String?   // JSON serializado
+  createdAt  DateTime  @default(now())
+
+  @@map("audit_logs")
+}
+
+// ─── Conteúdo ────────────────────────────────────────────────────────────────
+
+model Obra {
+  id            String     @id @default(cuid())
+  titulo        String
+  autorOriginal String
+  tradutora     String?
+  sinopse       String
+  capaUrl       String
+  preco         Float
+  status        String   @default("RASCUNHO") // "RASCUNHO" | "PUBLICADO" | "ARQUIVADO"
+  generos       String   // JSON array serializado: ["BL","Drama","Fantasia"]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  capitulos Capitulo[]
+  compras   Compra[]
+
+  @@map("obras")
+}
+
+model Capitulo {
+  id        String   @id @default(cuid())
+  obraId    String
+  obra      Obra     @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  numero    Int
+  titulo    String?
+  publicado Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  paginas Pagina[]
+
+  @@unique([obraId, numero])
+  @@map("capitulos")
+}
+
+model Pagina {
+  id             String   @id @default(cuid())
+  capituloId     String
+  capitulo       Capitulo @relation(fields: [capituloId], references: [id], onDelete: Cascade)
+  numero         Int
+  imagemUrl      String
+  textoOriginal  String?  // texto extraído via OCR ou digitado pelo admin
+  idiomaOriginal String?  // BCP-47: "ja", "ko", "zh-Hans", "zh-Hant", "ru", "en"
+  textoTraduzido String?  // tradução para pt-BR gerada pela Azure Translator
+  createdAt      DateTime @default(now())
+
+  @@unique([capituloId, numero])
+  @@map("paginas")
+}
+
+// ─── Pagamento ───────────────────────────────────────────────────────────────
+// Nunca armazenamos dados de cartão — o Mercado Pago gerencia o PCI DSS
+
+model Compra {
+  id          String       @id @default(cuid())
+  userId      String?      // nullable: preserva registro após exclusão de conta (LGPD + obrigação fiscal)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  obraId      String
+  obra        Obra         @relation(fields: [obraId], references: [id])
+  valorPago   Float        // registrado no momento da compra
+  status      String       @default("PENDENTE") // "PENDENTE" | "APROVADO" | "CANCELADO" | "REEMBOLSADO"
+  mpPaymentId String?      // ID do pagamento no Mercado Pago
+  mpOrderId   String?      // ID do pedido no Mercado Pago
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("compras")
+}
+
+// Enums removidos: SQLite não suporta enums no Prisma.
+// Usar strings com os mesmos valores — validados via Zod nas API routes.
