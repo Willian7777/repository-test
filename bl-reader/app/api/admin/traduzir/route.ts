@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { traduzirTexto, IDIOMAS_SUPORTADOS } from "@/lib/azure";
+import {
+  traduzirTexto, traduzirMyMemory, IDIOMAS_SUPORTADOS,
+  azureTranslatorConfigurado,
+} from "@/lib/azure";
 import { prisma } from "@/lib/prisma";
 import { registrarAuditoria, getIp } from "@/lib/auditlog";
 import { AcaoAudit } from "@/lib/constants";
@@ -11,7 +14,7 @@ const schema = z.object({
   idiomaOrigem: z.string().refine((v) => v in IDIOMAS_SUPORTADOS, {
     message: "Idioma não suportado",
   }),
-  paginaId: z.string().cuid().optional(), // se informado, salva no banco
+  paginaId: z.string().cuid().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -29,7 +32,17 @@ export async function POST(req: NextRequest) {
   const { texto, idiomaOrigem, paginaId } = parsed.data;
 
   try {
-    const traducao = await traduzirTexto(texto, idiomaOrigem);
+    // Fallback automático: Azure Translator → MyMemory (gratuito, sem chave)
+    let traducao: string;
+    let provedor: string;
+
+    if (azureTranslatorConfigurado()) {
+      traducao = await traduzirTexto(texto, idiomaOrigem);
+      provedor = "azure";
+    } else {
+      traducao = await traduzirMyMemory(texto, idiomaOrigem);
+      provedor = "mymemory";
+    }
 
     // Salvar no banco se paginaId foi informado
     if (paginaId) {
@@ -43,10 +56,10 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
       acao: AcaoAudit.ADMIN_TRADUCAO,
       ip: getIp(req),
-      metadata: { idiomaOrigem, chars: texto.length, paginaId },
+      metadata: { provedor, idiomaOrigem, chars: texto.length, paginaId },
     });
 
-    return NextResponse.json({ traducao });
+    return NextResponse.json({ traducao, provedor });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro desconhecido";
     return NextResponse.json({ error: msg }, { status: 502 });

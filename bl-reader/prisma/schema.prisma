@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  // Em produção (Vercel + Supabase): usar a URL do Transaction Pooler
+  // Em desenvolvimento local: pode continuar com SQLite trocando para "sqlite"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // necessário para migrações no Supabase
 }
 
 // ─── Autenticação NextAuth ───────────────────────────────────────────────────
@@ -66,8 +69,20 @@ model User {
   compras        Compra[]
   consentimentos ConsentimentoLGPD[]
   auditLogs      AuditLog[]
+  contaLocal     ContaLocal?
 
   @@map("users")
+}
+
+// Conta local (email + senha) — para leitoras que preferem não usar redes sociais
+model ContaLocal {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senhaHash String
+  createdAt DateTime @default(now())
+
+  @@map("contas_locais")
 }
 
 // ─── LGPD: Registro de consentimento ────────────────────────────────────────

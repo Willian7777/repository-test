@@ -1,12 +1,17 @@
 import type { NextConfig } from "next";
 
+// Proxy SSL corporativo — desabilita verificação apenas em dev local (igual ao poe2-market)
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
 // Content-Security-Policy — ajuste src se adicionar CDNs/fontes externas
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://lh3.googleusercontent.com",
+  "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.supabase.co",
   "connect-src 'self' https://api.mercadopago.com https://*.cognitiveservices.azure.com https://api.cognitive.microsofttranslator.com",
   "frame-src https://www.mercadopago.com.br https://www.mercadopago.com",
   "frame-ancestors 'none'",
@@ -34,6 +39,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       // Avatares do Google OAuth
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      // Imagens no Supabase Storage (capas e páginas das HQs)
+      { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
 };
