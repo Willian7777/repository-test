@@ -3,11 +3,14 @@ generator client {
 }
 
 datasource db {
-  // Em produção (Vercel + Supabase): usar a URL do Transaction Pooler
-  // Em desenvolvimento local: pode continuar com SQLite trocando para "sqlite"
+  // ── Desenvolvimento local ────────────────────────────────────────────────
+  // provider = "sqlite"
+  // url      = env("DATABASE_URL")
+
+  // ── Produção (Vercel + Supabase) ─────────────────────────────────────────
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // necessário para migrações no Supabase
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Autenticação NextAuth ───────────────────────────────────────────────────
