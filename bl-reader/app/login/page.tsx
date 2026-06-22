@@ -3,11 +3,7 @@ import LoginTabs from "@/components/LoginTabs";
 
 export const metadata: Metadata = { title: "Entrar | ZAIKA" };
 
-// Checa no servidor se o Google está configurado
-function googleConfigurado() {
-  const id = process.env.GOOGLE_CLIENT_ID ?? "";
-  return id.length > 0 && id !== "PREENCHA";
-}
+function ativo(val?: string) { return !!val && val !== "PREENCHA"; }
 
 export default async function LoginPage({
   searchParams,
@@ -17,6 +13,13 @@ export default async function LoginPage({
   const { tab, callbackUrl, error } = await searchParams;
   const abaInicial = tab === "cadastro" ? "cadastro" : "entrar";
   const destino = callbackUrl ?? "/";
+
+  const provedores = {
+    google:   ativo(process.env.GOOGLE_CLIENT_ID),
+    facebook: ativo(process.env.FACEBOOK_CLIENT_ID),
+    github:   ativo(process.env.GITHUB_CLIENT_ID),
+    discord:  ativo(process.env.DISCORD_CLIENT_ID),
+  };
 
   return (
     <div
@@ -36,7 +39,7 @@ export default async function LoginPage({
         <LoginTabs
           abaInicial={abaInicial}
           destino={destino}
-          googleAtivo={googleConfigurado()}
+          provedores={provedores}
           erro={error}
         />
       </div>

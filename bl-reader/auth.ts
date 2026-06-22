@@ -1,20 +1,39 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
+import Google   from "next-auth/providers/google";
+import Facebook from "next-auth/providers/facebook";
+import GitHub   from "next-auth/providers/github";
+import Discord  from "next-auth/providers/discord";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import type { Role } from "@/lib/constants";
 
+function ativo(id?: string) {
+  return !!id && id !== "PREENCHA";
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
-    // Google OAuth — só ativado quando as credenciais estiverem configuradas
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== "PREENCHA"
-      ? [Google({
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        })]
+    // Google — configure GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET
+    ...(ativo(process.env.GOOGLE_CLIENT_ID)
+      ? [Google({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! })]
+      : []),
+
+    // Facebook — configure FACEBOOK_CLIENT_ID + FACEBOOK_CLIENT_SECRET
+    ...(ativo(process.env.FACEBOOK_CLIENT_ID)
+      ? [Facebook({ clientId: process.env.FACEBOOK_CLIENT_ID!, clientSecret: process.env.FACEBOOK_CLIENT_SECRET! })]
+      : []),
+
+    // GitHub — configure GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET
+    ...(ativo(process.env.GITHUB_CLIENT_ID)
+      ? [GitHub({ clientId: process.env.GITHUB_CLIENT_ID!, clientSecret: process.env.GITHUB_CLIENT_SECRET! })]
+      : []),
+
+    // Discord — configure DISCORD_CLIENT_ID + DISCORD_CLIENT_SECRET
+    ...(ativo(process.env.DISCORD_CLIENT_ID)
+      ? [Discord({ clientId: process.env.DISCORD_CLIENT_ID!, clientSecret: process.env.DISCORD_CLIENT_SECRET! })]
       : []),
 
     // Login Admin — email/senha definidos no .env.local
