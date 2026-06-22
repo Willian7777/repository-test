@@ -23,7 +23,7 @@ export default function NovaObraForm() {
   const [status,    setStatus]    = useState("RASCUNHO");
   const [generos,   setGeneros]   = useState<string[]>([]);
 
-  // ── Extração de PDF ────────────────────────────────────────────────────────
+  // ── Extração de PDF (100% no browser — sem limite de tamanho) ──────────────
   async function handlePdf(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -31,47 +31,72 @@ export default function NovaObraForm() {
     setExtracting(true);
     setMsg("");
 
-    // Validação de tamanho no cliente (limite do Vercel: 4.5MB)
-    const MAX_MB = 4;
-    if (file.size > MAX_MB * 1024 * 1024) {
-      setMsg(`❌ PDF muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo: ${MAX_MB}MB. Comprima o PDF ou preencha os campos manualmente.`);
+    if (file.type !== "application/pdf") {
+      setMsg("❌ Apenas arquivos PDF são aceitos.");
       setExtracting(false);
       return;
     }
 
-    const fd = new FormData();
-    fd.append("file", file);
-
     try {
-      const res = await fetch("/api/admin/extrair-pdf", { method: "POST", body: fd });
+      // PDF.js processa no browser — sem limite de tamanho, sem upload para o servidor
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
-      // Lê como texto primeiro para evitar erro de parsing se resposta não for JSON
-      const texto = await res.text();
-      let data: { titulo?: string; autor?: string; tradutora?: string; paginas?: number; error?: string };
-      try {
-        data = JSON.parse(texto);
-      } catch {
-        if (texto.includes("413") || texto.toLowerCase().includes("too large") || texto.toLowerCase().includes("entity")) {
-          throw new Error(`PDF muito grande para o servidor. Comprima-o abaixo de ${MAX_MB}MB.`);
-        }
-        throw new Error("Resposta inesperada do servidor. Tente novamente.");
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      // Metadados do PDF (título, autor embutidos no arquivo)
+      const meta = await pdf.getMetadata().catch(() => ({ info: {} }));
+      const info = (meta.info ?? {}) as Record<string, string>;
+
+      // Extrair texto das primeiras 3 páginas
+      let texto = "";
+      for (let i = 1; i <= Math.min(3, pdf.numPages); i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        texto += content.items
+          .map(item => ("str" in item ? item.str : ""))
+          .join(" ") + "\n";
       }
 
-      if (!res.ok) throw new Error(data.error ?? "Erro ao processar PDF");
+      // Aplicar padrões de extração
+      const titulo    = extrairTitulo(info, texto);
+      const autor     = extrairAutor(info, texto);
+      const tradutora = extrairTradutora(texto);
 
-      if (data.titulo)    setTitulo(data.titulo);
-      if (data.autor)     setAutorOrig(data.autor);
-      if (data.tradutora) setTradutora(data.tradutora);
+      if (titulo)    setTitulo(titulo);
+      if (autor)     setAutorOrig(autor);
+      if (tradutora) setTradutora(tradutora);
 
-      const encontrados = [data.titulo, data.autor, data.tradutora].filter(Boolean).length;
+      const encontrados = [titulo, autor, tradutora].filter(Boolean).length;
       setMsg(encontrados > 0
-        ? `✓ ${encontrados} campo(s) preenchido(s) automaticamente a partir do PDF`
-        : "PDF processado — nenhum metadado encontrado. Preencha os campos manualmente.");
+        ? `✓ ${encontrados} campo(s) preenchido(s) — PDF: ${pdf.numPages} página(s), ${(file.size / 1024 / 1024).toFixed(1)}MB`
+        : "PDF lido — metadados não encontrados. Preencha os campos manualmente.");
     } catch (err) {
-      setMsg(`Erro: ${err instanceof Error ? err.message : "Falha ao processar PDF"}`);
+      setMsg(`Erro ao processar PDF: ${err instanceof Error ? err.message : "Falha desconhecida"}`);
     } finally {
       setExtracting(false);
     }
+  }
+
+  // Funções de extração por padrão de texto
+  function extrairTitulo(info: Record<string, string>, texto: string): string {
+    if (info?.Title?.trim()) return info.Title.trim();
+    const patterns = [/título[:\s]+([^\n\r]+)/i, /title[:\s]+([^\n\r]+)/i, /제목[:\s]+([^\n\r]+)/, /タイトル[:\s]+([^\n\r]+)/];
+    for (const p of patterns) { const m = texto.match(p); if (m?.[1]?.trim()) return m[1].trim().slice(0, 200); }
+    return texto.split(/\n|\r/).map(l => l.trim()).filter(l => l.length >= 3)[0]?.slice(0, 200) ?? "";
+  }
+  function extrairAutor(info: Record<string, string>, texto: string): string {
+    if (info?.Author?.trim()) return info.Author.trim();
+    const patterns = [/autor[a]?[:\s]+([^\n\r]+)/i, /author[:\s]+([^\n\r]+)/i, /작가[:\s]+([^\n\r]+)/, /作者[:\s]+([^\n\r]+)/];
+    for (const p of patterns) { const m = texto.match(p); if (m?.[1]?.trim()) return m[1].trim().slice(0, 200); }
+    return "";
+  }
+  function extrairTradutora(texto: string): string {
+    const patterns = [/tradut[oa]r?a?[:\s]+([^\n\r]+)/i, /tradu[çc][ãa]o[:\s]+([^\n\r]+)/i, /translated by[:\s]+([^\n\r]+)/i];
+    for (const p of patterns) { const m = texto.match(p); if (m?.[1]?.trim()) return m[1].trim().slice(0, 200); }
+    return "";
   }
 
   // ── Submissão do formulário ────────────────────────────────────────────────
@@ -113,7 +138,8 @@ export default function NovaObraForm() {
           )}
         </div>
         <p className="text-xs mb-3" style={{ color: "var(--color-muted)" }}>
-          Faça upload do PDF da obra e os campos Título, Autor e Tradutora serão preenchidos automaticamente.
+          Faça upload do PDF — o título, autor e tradutora serão preenchidos automaticamente.
+          Processado direto no navegador, sem limite de tamanho.
         </p>
         <div className="flex gap-2">
           <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handlePdf} />
