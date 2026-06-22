@@ -92,9 +92,14 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <button onClick={() => signIn("google")} className="btn-primary text-sm">
-              Entrar com Google
-            </button>
+            <div className="flex items-center gap-2">
+              <Link href="/login" className="btn-outline text-sm px-4 py-2">
+                Login
+              </Link>
+              <Link href="/login?tab=cadastro" className="btn-primary text-sm px-4 py-2">
+                Criar Conta
+              </Link>
+            </div>
           )}
 
           {/* Menu mobile */}
@@ -119,9 +124,14 @@ export default function Navbar() {
             </Link>
           )}
           {!session?.user && (
-            <button onClick={() => signIn("google")} className="w-full btn-primary text-sm mt-2">
-              Entrar com Google
-            </button>
+            <div className="flex flex-col gap-2 mt-2">
+              <Link href="/login" className="w-full btn-outline text-sm text-center" onClick={() => setMenuOpen(false)}>
+                Login
+              </Link>
+              <Link href="/login?tab=cadastro" className="w-full btn-primary text-sm text-center" onClick={() => setMenuOpen(false)}>
+                Criar Conta
+              </Link>
+            </div>
           )}
         </div>
       )}
