@@ -31,15 +31,32 @@ export default function NovaObraForm() {
     setExtracting(true);
     setMsg("");
 
+    // Validação de tamanho no cliente (limite do Vercel: 4.5MB)
+    const MAX_MB = 4;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      setMsg(`❌ PDF muito grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo: ${MAX_MB}MB. Comprima o PDF ou preencha os campos manualmente.`);
+      setExtracting(false);
+      return;
+    }
+
     const fd = new FormData();
     fd.append("file", file);
 
     try {
-      const res  = await fetch("/api/admin/extrair-pdf", { method: "POST", body: fd });
-      const data = await res.json() as {
-        titulo?: string; autor?: string; tradutora?: string;
-        paginas?: number; preview?: string; error?: string;
-      };
+      const res = await fetch("/api/admin/extrair-pdf", { method: "POST", body: fd });
+
+      // Lê como texto primeiro para evitar erro de parsing se resposta não for JSON
+      const texto = await res.text();
+      let data: { titulo?: string; autor?: string; tradutora?: string; paginas?: number; error?: string };
+      try {
+        data = JSON.parse(texto);
+      } catch {
+        if (texto.includes("413") || texto.toLowerCase().includes("too large") || texto.toLowerCase().includes("entity")) {
+          throw new Error(`PDF muito grande para o servidor. Comprima-o abaixo de ${MAX_MB}MB.`);
+        }
+        throw new Error("Resposta inesperada do servidor. Tente novamente.");
+      }
+
       if (!res.ok) throw new Error(data.error ?? "Erro ao processar PDF");
 
       if (data.titulo)    setTitulo(data.titulo);

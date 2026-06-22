@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Apenas arquivos PDF são aceitos" }, { status: 415 });
   }
 
-  if (file.size > 50 * 1024 * 1024) {
-    return NextResponse.json({ error: "PDF muito grande. Máx. 50 MB" }, { status: 413 });
+  if (file.size > 4 * 1024 * 1024) {
+    return NextResponse.json({ error: "PDF muito grande. Máx. 4 MB (limite do servidor Vercel)" }, { status: 413 });
   }
 
   try {
