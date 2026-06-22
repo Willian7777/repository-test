@@ -8,11 +8,8 @@ datasource db {
   // url      = env("DATABASE_URL")
 
   // ── Produção (Vercel + Supabase) ─────────────────────────────────────────
-  // DIRECT_URL: usado apenas para migrations locais.
-  // Em produção ambas as variáveis apontam para o pooler (porta 6543).
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 // ─── Autenticação NextAuth ───────────────────────────────────────────────────
