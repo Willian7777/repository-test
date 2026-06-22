@@ -51,6 +51,27 @@ export default async function HomePage() {
         <div className="absolute -bottom-16 -left-16 w-72 h-72 rounded-full opacity-10" style={{ background: "var(--color-secondary)" }} />
       </section>
 
+      {/* ── Obras em destaque ─────────────────────────────────────────────── */}
+      {destaque.length > 0 && (
+        <section className="py-12 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
+                ✦ Obras em Destaque
+              </h2>
+              <Link href="/obras" className="text-sm font-medium hover:underline" style={{ color: "var(--color-primary)" }}>
+                Ver todas →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {destaque.map((obra) => (
+                <ObraCard key={obra.id} {...obra} comprado={compraIds.includes(obra.id)} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Como funciona ─────────────────────────────────────────────────── */}
       <section className="py-16 px-4" style={{ background: "var(--color-card)" }}>
         <div className="max-w-5xl mx-auto">
@@ -72,27 +93,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ── Obras em destaque ─────────────────────────────────────────────── */}
-      {destaque.length > 0 && (
-        <section className="py-16 px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
-                ✦ Obras em Destaque
-              </h2>
-              <Link href="/obras" className="text-sm font-medium hover:underline" style={{ color: "var(--color-primary)" }}>
-                Ver todas →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {destaque.map((obra) => (
-                <ObraCard key={obra.id} {...obra} comprado={compraIds.includes(obra.id)} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {!session?.user && (
         <section className="py-16 px-4 text-center" style={{ background: "linear-gradient(135deg, #fce8f3 0%, #ede9fe 100%)" }}>
