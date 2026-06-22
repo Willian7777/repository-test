@@ -93,20 +93,32 @@ export default async function ObraPage({ params }: { params: Promise<{ id: strin
             Capítulos ({obra.capitulos.length})
           </h2>
           <div className="divide-y rounded-xl overflow-hidden border" style={{ borderColor: "var(--color-border)" }}>
-            {obra.capitulos.map((cap) => (
-              <div key={cap.id} className="flex items-center justify-between px-4 py-3" style={{ background: "var(--color-card)" }}>
-                <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
-                  Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ""}
-                </span>
-                {comprado ? (
-                  <Link href={`/obras/${obra.id}/ler/${cap.id}`} className="text-xs font-semibold hover:underline" style={{ color: "var(--color-primary)" }}>
-                    Ler →
-                  </Link>
-                ) : (
-                  <span className="text-xs" style={{ color: "var(--color-muted)" }}>🔒 Bloqueado</span>
-                )}
-              </div>
-            ))}
+            {obra.capitulos.map((cap) => {
+              const isGratuito = cap.numero === 1;
+              const temAcesso  = comprado || isGratuito;
+              return (
+                <div key={cap.id} className="flex items-center justify-between px-4 py-3" style={{ background: "var(--color-card)" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                      Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ""}
+                    </span>
+                    {isGratuito && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: "#dcfce7", color: "#16a34a" }}>
+                        Grátis
+                      </span>
+                    )}
+                  </div>
+                  {temAcesso ? (
+                    <Link href={`/obras/${obra.id}/ler/${cap.id}`} className="text-xs font-semibold hover:underline" style={{ color: "var(--color-primary)" }}>
+                      Ler →
+                    </Link>
+                  ) : (
+                    <span className="text-xs" style={{ color: "var(--color-muted)" }}>🔒 Bloqueado</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

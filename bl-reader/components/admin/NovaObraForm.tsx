@@ -70,9 +70,19 @@ export default function NovaObraForm() {
       if (tradutora) setTradutora(tradutora);
 
       const encontrados = [titulo, autor, tradutora].filter(Boolean).length;
-      setMsg(encontrados > 0
-        ? `✓ ${encontrados} campo(s) preenchido(s) — PDF: ${pdf.numPages} página(s), ${(file.size / 1024 / 1024).toFixed(1)}MB`
-        : "PDF lido — metadados não encontrados. Preencha os campos manualmente.");
+      if (encontrados > 0) {
+        setMsg(`✓ ${encontrados} campo(s) preenchido(s) — PDF: ${pdf.numPages} pág., ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+      } else {
+        // PDFs de mangá escaneados são baseados em imagens — sem texto extraível
+        // Tenta ao menos usar o nome do arquivo como título
+        const nomeSemExtensao = file.name.replace(/\.pdf$/i, "").replace(/[-_]/g, " ").trim();
+        if (nomeSemExtensao.length >= 3) {
+          setTitulo(nomeSemExtensao);
+          setMsg("📷 PDF baseado em imagens (mangá escaneado) — título preenchido pelo nome do arquivo. Complete os demais campos manualmente.");
+        } else {
+          setMsg("📷 PDF baseado em imagens (mangá escaneado) — metadados de texto não disponíveis. Preencha os campos manualmente.");
+        }
+      }
     } catch (err) {
       setMsg(`Erro ao processar PDF: ${err instanceof Error ? err.message : "Falha desconhecida"}`);
     } finally {

@@ -50,26 +50,38 @@ export async function POST(req: NextRequest) {
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://repository-test-zika2.vercel.app";
 
   // Cria preferência no Mercado Pago
-  const preference = await mpPreference.create({
-    body: {
-      items: [{
-        id: obra.id,
-        title: `ZAIKA — ${obra.titulo}`,
-        quantity: 1,
-        unit_price: obra.preco,
-        currency_id: "BRL",
-      }],
-      payer: { email: session.user.email! },
-      external_reference: compra.id,
-      back_urls: {
-        success: `${baseUrl}/obras/${obraId}/sucesso?compraId=${compra.id}`,
-        failure: `${baseUrl}/obras/${obraId}?erro=pagamento`,
-        pending: `${baseUrl}/obras/${obraId}?pendente=1`,
+  let preference;
+  try {
+    preference = await mpPreference.create({
+      body: {
+        items: [{
+          id: obra.id,
+          title: `ZAIKA — ${obra.titulo}`,
+          quantity: 1,
+          unit_price: obra.preco,
+          currency_id: "BRL",
+        }],
+        payer: { email: session.user.email! },
+        external_reference: compra.id,
+        back_urls: {
+          success: `${baseUrl}/obras/${obraId}/sucesso?compraId=${compra.id}`,
+          failure: `${baseUrl}/obras/${obraId}?erro=pagamento`,
+          pending: `${baseUrl}/obras/${obraId}?pendente=1`,
+        },
+        auto_return: "approved",
+        notification_url: `${baseUrl}/api/pagamentos/webhook`,
       },
-      auto_return: "approved",
-      notification_url: `${baseUrl}/api/pagamentos/webhook`,
-    },
-  });
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao criar preferência de pagamento";
+    // Se credenciais MP não configuradas, informar claramente
+    if (msg.includes("access_token") || msg.includes("Unauthorized") || msg.includes("401")) {
+      return NextResponse.json({
+        error: "Pagamento temporariamente indisponível. Credenciais do Mercado Pago não configuradas.",
+      }, { status: 503 });
+    }
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
 
   await registrarAuditoria({
     userId: session.user.id,

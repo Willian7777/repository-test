@@ -17,8 +17,18 @@ export default async function LeituraPage({
 
   if (!session?.user) redirect(`/login?callbackUrl=/obras/${obraId}/ler/${capituloId}`);
 
-  const comprado = await usuarioComprou(session.user.id, obraId);
-  if (!comprado) redirect(`/obras/${obraId}`);
+  // Verifica se o capítulo é gratuito (número 1 = sempre gratuito)
+  const capituloInfo = await prisma.capitulo.findFirst({
+    where: { id: capituloId, obraId, publicado: true },
+    select: { numero: true },
+  });
+
+  const isCapituloGratuito = capituloInfo?.numero === 1;
+
+  if (!isCapituloGratuito) {
+    const comprado = await usuarioComprou(session.user.id, obraId);
+    if (!comprado) redirect(`/obras/${obraId}`);
+  }
 
   const capitulo = await prisma.capitulo.findFirst({
     where: { id: capituloId, obraId, publicado: true },
