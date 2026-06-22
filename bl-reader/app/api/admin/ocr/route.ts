@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
 
-  const baseUrl   = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl   = process.env.NEXTAUTH_URL ?? "https://repository-test-zika2.vercel.app";
   const imagemUrl = parsed.data.imagemUrl.startsWith("/")
     ? `${baseUrl}${parsed.data.imagemUrl}`
     : parsed.data.imagemUrl;
@@ -117,4 +117,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
-
+

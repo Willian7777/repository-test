@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     },
   }));
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl = process.env.NEXTAUTH_URL ?? "https://repository-test-zika2.vercel.app";
 
   // Cria preferência no Mercado Pago
   const preference = await mpPreference.create({
