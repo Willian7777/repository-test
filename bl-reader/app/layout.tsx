@@ -6,6 +6,7 @@ import SessionProvider from "@/components/SessionProvider";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ConsentimentoBanner from "@/components/ConsentimentoBanner";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default async function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <ConsentimentoBanner userId={session?.user?.id} />
+          <Analytics />
         </SessionProvider>
       </body>
     </html>
