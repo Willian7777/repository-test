@@ -27,7 +27,8 @@ function onOpen() {
     .addItem('📝 Novo Lançamento', 'abrirFormulario')
     .addSeparator()
     .addItem('📊 Visão do Período (C1 vs Mês)', 'mostrarResumo')
-    .addItem('📈 Criar Gráficos no Dashboard', 'criarGraficos')
+    .addItem('� Resumo Anual', 'mostrarResumoAnual')
+    .addItem('�📈 Criar Gráficos no Dashboard', 'criarGraficos')
     .addSeparator()
     .addItem('🗂️ Gerenciar Categorias', 'gerenciarCategorias')
     .addItem('🗑️ Limpar Lançamentos do Mês', 'resetMes')
@@ -216,6 +217,153 @@ function resetMes() {
 
   SpreadsheetApp.flush();
   ui.alert('✅ ' + rowsToDelete.length + ' lançamento(s) de ' + nomeMes + '/' + ano + ' removido(s).');
+}
+
+// ═══ Resumo Anual ═══
+function mostrarResumoAnual() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Lancamentos');
+  var dash  = ss.getSheetByName('Dashboard');
+  if (!sheet) { SpreadsheetApp.getUi().alert('Aba "Lancamentos" não encontrada!'); return; }
+
+  var ano = dash ? Number(dash.getRange('B3').getValue()) : new Date().getFullYear();
+  if (!ano || isNaN(ano)) ano = new Date().getFullYear();
+
+  var meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var mesesFull = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  // Inicializar acumuladores por mês
+  var rec  = new Array(13).fill(0);
+  var desp = new Array(13).fill(0);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    var dados = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+    for (var i = 0; i < dados.length; i++) {
+      var row = dados[i];
+      var dt  = row[1];
+      if (!(dt instanceof Date)) continue;
+      if (dt.getFullYear() !== ano) continue;
+      var m     = dt.getMonth() + 1;
+      var tipo  = String(row[0]).trim();
+      var valor = Number(row[6]) || 0;
+      if (tipo === 'Receita') rec[m]  += valor;
+      else                    desp[m] += valor;
+    }
+  }
+
+  // Totais anuais
+  var totalRec = 0, totalDesp = 0;
+  for (var m = 1; m <= 12; m++) { totalRec += rec[m]; totalDesp += desp[m]; }
+  var totalSaldo = totalRec - totalDesp;
+
+  // Mês com maior gasto e maior receita
+  var melhorMes = 0, melhorVal = -Infinity;
+  var piorMes   = 0, piorVal   = Infinity;
+  for (var m = 1; m <= 12; m++) {
+    var saldo = rec[m] - desp[m];
+    if (rec[m] > 0 || desp[m] > 0) {
+      if (saldo > melhorVal) { melhorVal = saldo; melhorMes = m; }
+      if (saldo < piorVal)  { piorVal   = saldo; piorMes   = m; }
+    }
+  }
+
+  function fmt(v) {
+    return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  function cor(v) { return v >= 0 ? '#27AE60' : '#E74C3C'; }
+  function bar(perc, color) {
+    var w = Math.min(Math.abs(perc), 100);
+    return '<div style="height:6px;background:#EEE;border-radius:3px;margin-top:3px">'
+         + '<div style="width:' + w + '%;height:100%;background:' + color + ';border-radius:3px"></div></div>';
+  }
+
+  var maxDesp = Math.max.apply(null, desp.slice(1)) || 1;
+  var maxRec  = Math.max.apply(null, rec.slice(1))  || 1;
+
+  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>';
+  h += '*{box-sizing:border-box;margin:0;padding:0}';
+  h += 'body{font-family:"Google Sans","Segoe UI",sans-serif;padding:14px;background:#F4F6F8;color:#1B2A4A;font-size:12px}';
+  h += 'h2{font-size:15px;text-align:center;margin-bottom:3px}';
+  h += '.sub{text-align:center;color:#888;font-size:11px;margin-bottom:12px}';
+  h += '.card{background:#FFF;border-radius:10px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}';
+  h += '.card h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#5F6368;margin-bottom:8px;border-bottom:1px solid #F0F0F0;padding-bottom:5px}';
+  h += 'table{width:100%;border-collapse:collapse}';
+  h += 'th{font-size:10px;color:#888;font-weight:600;text-align:right;padding:2px 4px}';
+  h += 'th:first-child{text-align:left}';
+  h += 'td{padding:4px 4px;font-size:11px;text-align:right;border-bottom:1px solid #F7F7F7}';
+  h += 'td:first-child{text-align:left;font-weight:600}';
+  h += 'tr.vazio td{color:#CCC;font-style:italic}';
+  h += 'tr.total td{font-weight:800;font-size:12px;border-top:2px solid #DDD;padding-top:6px}';
+  h += '.kpi-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}';
+  h += '.kpi{background:#FFF;border-radius:8px;padding:10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}';
+  h += '.kpi .v{font-size:13px;font-weight:800;margin-top:4px}';
+  h += '.kpi .l{font-size:10px;color:#888}';
+  h += '.destaque{font-size:10px;color:#888;text-align:center;margin-top:6px}';
+  h += '.ano-sel{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:10px}';
+  h += '.ano-sel button{border:none;background:#E3F2FD;color:#1976D2;font-weight:700;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:13px}';
+  h += '.ano-sel span{font-size:16px;font-weight:800}';
+  h += '</style></head><body>';
+  h += '<h2>📅 Resumo Anual</h2>';
+  h += '<div class="sub">Ano base: ' + ano + ' (selecionado no Dashboard)</div>';
+
+  // KPIs anuais
+  h += '<div class="kpi-grid">';
+  h += '<div class="kpi"><div class="l">Total Receitas</div><div class="v" style="color:#27AE60">' + fmt(totalRec) + '</div></div>';
+  h += '<div class="kpi"><div class="l">Total Despesas</div><div class="v" style="color:#E74C3C">' + fmt(totalDesp) + '</div></div>';
+  h += '<div class="kpi"><div class="l">Saldo do Ano</div><div class="v" style="color:' + cor(totalSaldo) + '">' + fmt(totalSaldo) + '</div></div>';
+  h += '</div><br>';
+
+  // Destaques
+  if (melhorMes > 0) {
+    h += '<div class="destaque">🏆 Melhor mês: <b>' + mesesFull[melhorMes] + '</b> (' + fmt(melhorVal) + ' de saldo) &nbsp;|&nbsp; ';
+    h += '⚠️ Pior mês: <b>' + mesesFull[piorMes] + '</b> (' + fmt(piorVal) + ' de saldo)</div><br>';
+  }
+
+  // Tabela mensal
+  h += '<div class="card">';
+  h += '<h3>Mês a mês</h3>';
+  h += '<table><thead><tr><th>Mês</th><th>Receitas</th><th>Despesas</th><th>Saldo</th></tr></thead><tbody>';
+
+  for (var m = 1; m <= 12; m++) {
+    var saldo = rec[m] - desp[m];
+    var vazio = rec[m] === 0 && desp[m] === 0;
+    h += '<tr' + (vazio ? ' class="vazio"' : '') + '>';
+    h += '<td>' + meses[m] + '</td>';
+    if (vazio) {
+      h += '<td colspan="3" style="text-align:center">—</td>';
+    } else {
+      h += '<td style="color:#27AE60">' + fmt(rec[m])  + bar(rec[m]/maxRec*100, '#27AE60') + '</td>';
+      h += '<td style="color:#E74C3C">' + fmt(desp[m]) + bar(desp[m]/maxDesp*100, '#E74C3C') + '</td>';
+      h += '<td style="color:' + cor(saldo) + ';font-weight:700">' + fmt(saldo) + '</td>';
+    }
+    h += '</tr>';
+  }
+
+  h += '<tr class="total">';
+  h += '<td>TOTAL</td>';
+  h += '<td style="color:#27AE60">' + fmt(totalRec) + '</td>';
+  h += '<td style="color:#E74C3C">' + fmt(totalDesp) + '</td>';
+  h += '<td style="color:' + cor(totalSaldo) + '">' + fmt(totalSaldo) + '</td>';
+  h += '</tr>';
+  h += '</tbody></table></div>';
+
+  // Taxa de economia
+  var txEcon = totalRec > 0 ? (totalSaldo / totalRec * 100).toFixed(1) : 0;
+  var mediaRec  = totalRec  / 12;
+  var mediaDesp = totalDesp / 12;
+  h += '<div class="kpi-grid">';
+  h += '<div class="kpi"><div class="l">Média mensal Receita</div><div class="v" style="color:#27AE60">' + fmt(mediaRec) + '</div></div>';
+  h += '<div class="kpi"><div class="l">Média mensal Despesa</div><div class="v" style="color:#E74C3C">' + fmt(mediaDesp) + '</div></div>';
+  h += '<div class="kpi"><div class="l">Taxa de economia</div><div class="v" style="color:' + cor(totalSaldo) + '">' + txEcon + '%</div></div>';
+  h += '</div>';
+
+  h += '</body></html>';
+
+  var out = HtmlService.createHtmlOutput(h)
+    .setWidth(480).setHeight(680).setTitle('Resumo Anual ' + ano);
+  SpreadsheetApp.getUi().showSidebar(out);
 }
 
 // ═══ Gerenciador de Categorias ═══
