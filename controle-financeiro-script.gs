@@ -27,12 +27,13 @@ function onOpen() {
     .addItem('📝 Novo Lançamento', 'abrirFormulario')
     .addSeparator()
     .addItem('📊 Visão do Período (C1 vs Mês)', 'mostrarResumo')
-    .addItem('� Resumo Anual', 'mostrarResumoAnual')
-    .addItem('�📈 Criar Gráficos no Dashboard', 'criarGraficos')
+    .addItem('📅 Resumo Anual', 'mostrarResumoAnual')
+    .addItem('📈 Criar Gráficos no Dashboard', 'criarGraficos')
     .addSeparator()
     .addItem('🗂️ Gerenciar Categorias', 'gerenciarCategorias')
     .addItem('🗑️ Limpar Lançamentos do Mês', 'resetMes')
     .addSeparator()
+    .addItem('🔄 Corrigir Status (migração)', 'corrigirStatus')
     .addItem('🏠 Ir para Dashboard', 'irParaDashboard')
     .addToUi();
 }
@@ -41,6 +42,49 @@ function irParaDashboard() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dash = ss.getSheetByName('Dashboard');
   if (dash) { ss.setActiveSheet(dash); dash.setActiveCell(dash.getRange('A1')); }
+}
+
+// ═══ Correção de Status (migração de dados antigos) ═══
+function corrigirStatus() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Lancamentos');
+  if (!sheet) { ui.alert('Aba "Lancamentos" não encontrada!'); return; }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { ui.alert('Nenhum lançamento encontrado.'); return; }
+
+  var resp = ui.alert(
+    '🔄 Corrigir Status',
+    'Isso vai converter os status antigos para o novo padrão:\n\n' +
+    '• "Pendente" em Receitas  → "A Receber"\n' +
+    '• "Pendente" em Despesas  → "A Pagar"\n\n' +
+    'Deseja continuar?',
+    ui.ButtonSet.YES_NO
+  );
+  if (resp !== ui.Button.YES) return;
+
+  var dados = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+  var corrigidos = 0;
+
+  for (var i = 0; i < dados.length; i++) {
+    var tipo   = String(dados[i][0]).trim();
+    var status = String(dados[i][7]).trim();
+
+    if (status === 'Pendente') {
+      var novoStatus = tipo === 'Receita' ? 'A Receber' : 'A Pagar';
+      sheet.getRange(i + 2, 8).setValue(novoStatus);
+      corrigidos++;
+    }
+  }
+
+  SpreadsheetApp.flush();
+
+  if (corrigidos === 0) {
+    ui.alert('✅ Nenhum status "Pendente" encontrado. Dados já estão no novo formato!');
+  } else {
+    ui.alert('✅ ' + corrigidos + ' registro(s) corrigido(s) com sucesso!\n\nSeu dashboard já reflete os novos status.');
+  }
 }
 
 // ═══ Visão do Período: Ciclo 1 atual vs Mês completo ═══
