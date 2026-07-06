@@ -30,6 +30,8 @@ function onOpen() {
     .addItem('📅 Resumo Anual', 'mostrarResumoAnual')
     .addItem('📈 Criar Gráficos no Dashboard', 'criarGraficos')
     .addSeparator()
+    .addItem('✈️ Planejamento de Viagem', 'abrirPlanejamentoViagem')
+    .addSeparator()
     .addItem('🗂️ Gerenciar Categorias', 'gerenciarCategorias')
     .addItem('🗑️ Limpar Lançamentos do Mês', 'resetMes')
     .addSeparator()
@@ -42,6 +44,21 @@ function irParaDashboard() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dash = ss.getSheetByName('Dashboard');
   if (dash) { ss.setActiveSheet(dash); dash.setActiveCell(dash.getRange('A1')); }
+}
+
+function abrirPlanejamentoViagem() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var wv = ss.getSheetByName('Planejamento Viagem');
+  if (wv) {
+    ss.setActiveSheet(wv);
+    wv.setActiveCell(wv.getRange('C4'));
+  } else {
+    SpreadsheetApp.getUi().alert(
+      '⚠️ Aba não encontrada',
+      'Importe o arquivo controle-financeiro-final.xlsx atualizado para ter a aba "Planejamento Viagem".',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
 }
 
 // ═══ Correção de Status (migração de dados antigos) ═══
