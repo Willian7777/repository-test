@@ -31,7 +31,8 @@ function onOpen() {
     .addItem('📈 Criar Gráficos no Dashboard', 'criarGraficos')
     .addSeparator()
     .addItem('✈️ Planejamento de Viagem', 'abrirPlanejamentoViagem')
-    .addItem('🛒 Compras & Metas', 'abrirComprasMetas')
+    .addItem('�️ Dicas do Destino', 'verDicasDestino')
+    .addItem('�🛒 Compras & Metas', 'abrirComprasMetas')
     .addSeparator()
     .addItem('🗂️ Gerenciar Categorias', 'gerenciarCategorias')
     .addItem('🗑️ Limpar Lançamentos do Mês', 'resetMes')
@@ -75,6 +76,246 @@ function abrirComprasMetas() {
       SpreadsheetApp.getUi().ButtonSet.OK
     );
   }
+}
+
+function abrirComprasMetas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var wm = ss.getSheetByName('Compras & Metas');
+  if (wm) {
+    ss.setActiveSheet(wm);
+    wm.setActiveCell(wm.getRange('E4'));
+  } else {
+    SpreadsheetApp.getUi().alert(
+      '⚠️ Aba não encontrada',
+      'Importe o arquivo controle-financeiro-final.xlsx atualizado para ter a aba "Compras & Metas".',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+// ═══ Dicas do Destino (Nominatim + Overpass + Wikipedia) ═══
+function verDicasDestino() {
+  var ss   = SpreadsheetApp.getActiveSpreadsheet();
+  var wv   = ss.getSheetByName('Planejamento Viagem');
+  var cidade = '';
+
+  // Tenta ler da célula E5 da aba Planejamento Viagem
+  if (wv) {
+    cidade = String(wv.getRange('E5').getValue()).trim();
+  }
+
+  // Se não encontrou, pede ao usuário
+  if (!cidade) {
+    var ui   = SpreadsheetApp.getUi();
+    var resp = ui.prompt('🗺️ Dicas do Destino',
+                         'Informe a cidade de destino (ex: Florianópolis, SC):',
+                         ui.ButtonSet.OK_CANCEL);
+    if (resp.getSelectedButton() !== ui.Button.OK) return;
+    cidade = resp.getResponseText().trim();
+  }
+  if (!cidade) return;
+
+  // Mostrar loading
+  var html = HtmlService.createHtmlOutput(
+    '<div style="font-family:\'Segoe UI\',sans-serif;padding:20px;text-align:center">' +
+    '<div style="font-size:40px">🔍</div>' +
+    '<p style="color:#555;margin-top:12px">Buscando dicas para <b>' + cidade + '</b>...</p>' +
+    '<p style="color:#999;font-size:12px">Aguarde alguns segundos</p></div>'
+  ).setWidth(440).setHeight(200).setTitle('Carregando...');
+  SpreadsheetApp.getUi().showSidebar(html);
+
+  // Buscar dados
+  try {
+    var dados = _buscarDicasDestino(cidade);
+    _mostrarSidebarDicas(cidade, dados);
+  } catch (e) {
+    _mostrarSidebarDicas(cidade, null, e.message);
+  }
+}
+
+function _buscarDicasDestino(cidade) {
+  var opts = { muteHttpExceptions: true, headers: { 'User-Agent': 'ControleFinanceiro/1.0' } };
+
+  // 1) Geocode com Nominatim
+  var geoUrl  = 'https://nominatim.openstreetmap.org/search?q=' +
+                encodeURIComponent(cidade + ', Brasil') +
+                '&format=json&limit=1&addressdetails=1';
+  var geoResp = UrlFetchApp.fetch(geoUrl, opts);
+  var geoData = JSON.parse(geoResp.getContentText());
+  if (!geoData || geoData.length === 0) throw new Error('Cidade não encontrada: ' + cidade);
+
+  var lat      = parseFloat(geoData[0].lat);
+  var lon      = parseFloat(geoData[0].lon);
+  var nomeCidade = geoData[0].display_name.split(',')[0];
+
+  // 2) Wikipedia (resumo em PT)
+  var wikiUrl  = 'https://pt.wikipedia.org/api/rest_v1/page/summary/' +
+                 encodeURIComponent(nomeCidade);
+  var wikiResp = UrlFetchApp.fetch(wikiUrl, opts);
+  var wikiText = '';
+  if (wikiResp.getResponseCode() === 200) {
+    var wikiData = JSON.parse(wikiResp.getContentText());
+    wikiText = wikiData.extract ? wikiData.extract.substring(0, 350) + '...' : '';
+  }
+
+  // 3) Overpass API — hotéis, restaurantes, atrações num raio de 10km
+  var radius = 10000; // 10km
+  var overpassQuery =
+    '[out:json][timeout:20];' +
+    '(' +
+      'node["tourism"~"hotel|hostel|guest_house|motel"](around:' + radius + ',' + lat + ',' + lon + ');' +
+      'node["amenity"="restaurant"](around:' + radius + ',' + lat + ',' + lon + ');' +
+      'node["tourism"~"attraction|museum|viewpoint|theme_park|zoo"](around:' + radius + ',' + lat + ',' + lon + ');' +
+      'node["amenity"~"cafe|bar"](around:' + radius + ',' + lat + ',' + lon + ');' +
+    ');' +
+    'out body 60;';
+
+  var overpassUrl  = 'https://overpass-api.de/api/interpreter';
+  var overpassResp = UrlFetchApp.fetch(overpassUrl, {
+    method: 'post', payload: 'data=' + encodeURIComponent(overpassQuery),
+    muteHttpExceptions: true
+  });
+
+  var hoteis = [], restaurantes = [], atracoes = [];
+
+  if (overpassResp.getResponseCode() === 200) {
+    var elements = JSON.parse(overpassResp.getContentText()).elements || [];
+
+    elements.forEach(function(el) {
+      var tags = el.tags || {};
+      var nome = tags.name || tags['name:pt'] || '';
+      if (!nome) return;
+
+      var tourism  = tags.tourism || '';
+      var amenity  = tags.amenity || '';
+      var rating   = tags['stars'] ? '⭐'.repeat(Math.min(parseInt(tags['stars']), 5)) : '';
+      var cuisine  = tags.cuisine ? ' (' + tags.cuisine.replace(/_/g,' ') + ')' : '';
+
+      if (tourism.match(/hotel|hostel|guest_house|motel/)) {
+        if (hoteis.length < 6) hoteis.push({ nome: nome, detalhe: rating });
+      } else if (amenity === 'restaurant') {
+        if (restaurantes.length < 6) restaurantes.push({ nome: nome, detalhe: cuisine });
+      } else if (amenity === 'cafe') {
+        if (restaurantes.length < 6) restaurantes.push({ nome: nome + ' ☕', detalhe: '' });
+      } else if (tourism.match(/attraction|museum|viewpoint|theme_park|zoo/)) {
+        var tipo = tourism === 'museum' ? '🏛️' :
+                   tourism === 'viewpoint' ? '🔭' :
+                   tourism === 'theme_park' ? '🎢' : '📍';
+        if (atracoes.length < 6) atracoes.push({ nome: nome, detalhe: tipo });
+      }
+    });
+  }
+
+  return {
+    lat: lat, lon: lon,
+    nomeCidade: nomeCidade,
+    wikiText: wikiText,
+    hoteis: hoteis,
+    restaurantes: restaurantes,
+    atracoes: atracoes
+  };
+}
+
+function _mostrarSidebarDicas(cidade, dados, erro) {
+  var enc = encodeURIComponent;
+  var gmBase = 'https://www.google.com/maps/search/';
+
+  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>';
+  h += '*{box-sizing:border-box;margin:0;padding:0}';
+  h += 'body{font-family:"Segoe UI",sans-serif;font-size:13px;background:#F4F6F8;color:#1B2A4A}';
+  h += '.hero{background:#1B2A4A;color:#FFF;padding:16px;text-align:center}';
+  h += '.hero h2{font-size:18px;margin-bottom:4px}';
+  h += '.hero p{font-size:11px;color:#AAA;line-height:1.4}';
+  h += '.card{background:#FFF;border-radius:10px;margin:10px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}';
+  h += '.card h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#555;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #EEE}';
+  h += '.item{padding:5px 0;border-bottom:1px solid #F5F5F5;display:flex;justify-content:space-between;align-items:center}';
+  h += '.item:last-child{border-bottom:none}';
+  h += '.item .nome{font-size:12px;color:#1B2A4A;flex:1}';
+  h += '.item .det{font-size:10px;color:#999;margin-left:6px}';
+  h += '.empty{font-size:11px;color:#AAA;font-style:italic;padding:4px 0}';
+  h += '.btn{display:block;background:#4285F4;color:#FFF;text-decoration:none;text-align:center;';
+  h += 'padding:8px;border-radius:8px;font-size:11px;font-weight:700;margin-top:6px}';
+  h += '.btn:hover{background:#3367D6}';
+  h += '.btn.green{background:#27AE60}.btn.orange{background:#E67E22}.btn.purple{background:#8E44AD}';
+  h += '.wiki{font-size:11px;color:#555;line-height:1.5;padding:4px 0}';
+  h += '.links{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}';
+  h += '.links a{flex:1;min-width:100px;font-size:10px}';
+  h += '.erro{padding:20px;text-align:center;color:#E74C3C}';
+  h += '</style></head><body>';
+
+  if (erro) {
+    h += '<div class="hero"><h2>⚠️ Erro na busca</h2></div>';
+    h += '<div class="card"><p class="erro">' + erro + '</p>';
+    h += '<p style="font-size:11px;color:#888;text-align:center;margin-top:8px">Verifique a cidade e tente novamente.</p></div>';
+    h += '</body></html>';
+    SpreadsheetApp.getUi().showSidebar(
+      HtmlService.createHtmlOutput(h).setWidth(440).setTitle('Dicas: ' + cidade));
+    return;
+  }
+
+  // Hero
+  h += '<div class="hero">';
+  h += '<h2>📍 ' + dados.nomeCidade + '</h2>';
+  if (dados.wikiText) h += '<p>' + dados.wikiText + '</p>';
+  h += '</div>';
+
+  // Links Google Maps
+  h += '<div class="card">';
+  h += '<h3>🔗 Pesquisar no Google Maps</h3>';
+  h += '<div class="links">';
+  h += '<a class="btn" href="' + gmBase + enc('hoteis em ' + dados.nomeCidade) + '" target="_blank">🏨 Hotéis</a>';
+  h += '<a class="btn green" href="' + gmBase + enc('restaurantes em ' + dados.nomeCidade) + '" target="_blank">🍽️ Restaurantes</a>';
+  h += '<a class="btn orange" href="' + gmBase + enc('pontos turisticos em ' + dados.nomeCidade) + '" target="_blank">🏛️ Atrações</a>';
+  h += '<a class="btn purple" href="' + gmBase + enc('o que fazer em ' + dados.nomeCidade) + '" target="_blank">📍 O que fazer</a>';
+  h += '</div></div>';
+
+  // Hotéis
+  h += '<div class="card"><h3>🏨 Hotéis e Pousadas</h3>';
+  if (dados.hoteis.length > 0) {
+    dados.hoteis.forEach(function(i) {
+      h += '<div class="item"><span class="nome">' + i.nome + '</span><span class="det">' + i.detalhe + '</span></div>';
+    });
+  } else {
+    h += '<p class="empty">Nenhum dado OSM disponível — use o link Google Maps acima</p>';
+  }
+  h += '<a class="btn" style="margin-top:8px" href="' + gmBase + enc('hoteis pousadas ' + dados.nomeCidade) + '" target="_blank">Ver mais no Maps →</a>';
+  h += '</div>';
+
+  // Restaurantes
+  h += '<div class="card"><h3>🍽️ Gastronomia</h3>';
+  if (dados.restaurantes.length > 0) {
+    dados.restaurantes.forEach(function(i) {
+      h += '<div class="item"><span class="nome">' + i.nome + '</span><span class="det">' + i.detalhe + '</span></div>';
+    });
+  } else {
+    h += '<p class="empty">Nenhum dado OSM disponível — use o link Google Maps acima</p>';
+  }
+  h += '<a class="btn green" style="margin-top:8px" href="' + gmBase + enc('restaurantes ' + dados.nomeCidade) + '" target="_blank">Ver mais no Maps →</a>';
+  h += '</div>';
+
+  // Atrações
+  h += '<div class="card"><h3>🏛️ Pontos Turísticos</h3>';
+  if (dados.atracoes.length > 0) {
+    dados.atracoes.forEach(function(i) {
+      h += '<div class="item"><span class="nome">' + i.detalhe + ' ' + i.nome + '</span></div>';
+    });
+  } else {
+    h += '<p class="empty">Nenhum dado OSM disponível — use o link Google Maps acima</p>';
+  }
+  h += '<a class="btn orange" style="margin-top:8px" href="' + gmBase + enc('pontos turisticos ' + dados.nomeCidade) + '" target="_blank">Ver mais no Maps →</a>';
+  h += '</div>';
+
+  // Coordenadas / mapa
+  h += '<div class="card"><h3>🗺️ Ver no Mapa</h3>';
+  h += '<a class="btn" href="https://www.google.com/maps/@' + dados.lat + ',' + dados.lon + ',13z" target="_blank">Abrir mapa de ' + dados.nomeCidade + '</a>';
+  h += '<a class="btn green" style="margin-top:6px" href="https://www.google.com/maps/dir//' + enc(dados.nomeCidade) + '" target="_blank">🧭 Como chegar</a>';
+  h += '</div>';
+
+  h += '<div style="text-align:center;font-size:10px;color:#AAA;padding:8px">Dados: OpenStreetMap · Wikipedia · Google Maps</div>';
+  h += '</body></html>';
+
+  SpreadsheetApp.getUi().showSidebar(
+    HtmlService.createHtmlOutput(h).setWidth(440).setTitle('🗺️ Dicas: ' + dados.nomeCidade));
 }
 
 // ═══ Correção de Status (migração de dados antigos) ═══
