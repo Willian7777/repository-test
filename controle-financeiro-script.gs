@@ -1,0 +1,534 @@
+/**
+ * ════════════════════════════════════════════════════════
+ *  CONTROLE FINANCEIRO — WILL & SÁ
+ *  Google Apps Script — Formulário de Lançamentos
+ * ════════════════════════════════════════════════════════
+ *
+ *  COMO INSTALAR:
+ *  1. Importe o arquivo .xlsx no Google Drive
+ *  2. Abra como Google Sheets
+ *  3. Vá em: Extensões → Apps Script
+ *  4. Apague tudo que estiver no editor
+ *  5. Cole TODO o conteúdo deste arquivo
+ *  6. Clique em 💾 Salvar (ou Ctrl+S)
+ *  7. Feche a aba do Apps Script
+ *  8. Recarregue a planilha (F5)
+ *  9. Um novo menu "💰 Controle" aparece na barra de menus
+ *  10. Clique em 💰 Controle → 📝 Novo Lançamento
+ *
+ *  Na primeira vez, o Google vai pedir autorização — clique em
+ *  "Permitir" para que o script acesse a planilha.
+ */
+
+// ═══ Menu customizado ═══
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('💰 Controle')
+    .addItem('📝 Novo Lançamento', 'abrirFormulario')
+    .addItem('📊 Criar Gráficos no Dashboard', 'criarGraficos')
+    .addSeparator()
+    .addItem('� Gerenciar Categorias', 'gerenciarCategorias')
+    .addItem('�🗑️ Limpar Lançamentos do Mês', 'resetMes')
+    .addSeparator()
+    .addItem('🏠 Ir para Dashboard', 'irParaDashboard')
+    .addToUi();
+}
+
+function irParaDashboard() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dash = ss.getSheetByName('Dashboard');
+  if (dash) { ss.setActiveSheet(dash); dash.setActiveCell(dash.getRange('A1')); }
+}
+
+function resetMes() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dash = ss.getSheetByName('Dashboard');
+  var sheet = ss.getSheetByName('Lancamentos');
+  if (!sheet) { ui.alert('Aba "Lancamentos" não encontrada!'); return; }
+
+  // Pegar mês e ano selecionados no Dashboard
+  var mes = dash ? dash.getRange('B2').getValue() : new Date().getMonth() + 1;
+  var ano = dash ? dash.getRange('B3').getValue() : new Date().getFullYear();
+  var meses = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var nomeMes = meses[mes] || mes;
+
+  // Confirmar com o usuário
+  var resp = ui.alert(
+    '🗑️ Limpar Lançamentos',
+    'Isso vai APAGAR todos os lançamentos de ' + nomeMes + '/' + ano + '.\n\n' +
+    'Essa ação não pode ser desfeita.\n\nDeseja continuar?',
+    ui.ButtonSet.YES_NO
+  );
+  if (resp !== ui.Button.YES) return;
+
+  // Encontrar e deletar linhas do mês/ano selecionado
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { ui.alert('Nenhum lançamento encontrado.'); return; }
+
+  var data = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+  var rowsToDelete = [];
+
+  for (var i = data.length - 1; i >= 0; i--) {
+    var dt = data[i][1]; // coluna B = Data
+    if (dt instanceof Date) {
+      if ((dt.getMonth() + 1) === mes && dt.getFullYear() === ano) {
+        rowsToDelete.push(i + 2); // +2 porque dados começam na linha 2
+      }
+    }
+  }
+
+  if (rowsToDelete.length === 0) {
+    ui.alert('Nenhum lançamento encontrado em ' + nomeMes + '/' + ano + '.');
+    return;
+  }
+
+  // Deletar de baixo pra cima para não deslocar índices
+  for (var j = 0; j < rowsToDelete.length; j++) {
+    sheet.deleteRow(rowsToDelete[j]);
+  }
+
+  SpreadsheetApp.flush();
+  ui.alert('✅ ' + rowsToDelete.length + ' lançamento(s) de ' + nomeMes + '/' + ano + ' removido(s).');
+}
+
+// ═══ Gerenciador de Categorias ═══
+function gerenciarCategorias() {
+  var cats = obterCategorias();
+  var catsJson = JSON.stringify(cats);
+
+  var h = '';
+  h += '<!DOCTYPE html><html><head><style>';
+  h += '*{box-sizing:border-box;margin:0;padding:0}';
+  h += 'body{font-family:"Google Sans","Segoe UI",sans-serif;padding:20px;background:#FAFBFC;color:#1B2A4A}';
+  h += 'h2{font-size:18px;margin-bottom:16px;text-align:center}';
+  h += '.list{max-height:300px;overflow-y:auto;border:1px solid #E0E0E0;border-radius:8px;margin-bottom:16px;background:#FFF}';
+  h += '.item{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #F0F0F0}';
+  h += '.item:last-child{border-bottom:none}';
+  h += '.item .nome{flex:1;font-size:14px}';
+  h += '.btns{display:flex;gap:4px}';
+  h += '.edt{background:#E3F2FD;color:#2980B9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:700;font-size:12px}';
+  h += '.edt:hover{background:#2980B9;color:#FFF}';
+  h += '.del{background:#FFEBEE;color:#E74C3C;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:700;font-size:12px}';
+  h += '.del:hover{background:#E74C3C;color:#FFF}';
+  h += '.add-row{display:flex;gap:8px}';
+  h += '.add-row input{flex:1;padding:10px 12px;border:2px solid #E0E0E0;border-radius:8px;font-size:14px}';
+  h += '.add-row input:focus{border-color:#2980B9;outline:none}';
+  h += '.btn-add{padding:10px 16px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;background:#27AE60;color:#FFF}';
+  h += '.btn-add:hover{background:#1E8449}';
+  h += '.toast{position:fixed;top:12px;left:12px;right:12px;padding:10px;border-radius:8px;text-align:center;font-weight:600;display:none;font-size:13px;background:#E8F5E9;color:#1E8449;border:1px solid #A5D6A7}';
+  h += '.empty{text-align:center;padding:20px;color:#999;font-style:italic}';
+  h += '</style></head><body>';
+  h += '<h2>Gerenciar Categorias</h2>';
+  h += '<div id="toast" class="toast"></div>';
+  h += '<div class="add-row">';
+  h += '<input type="text" id="nova" placeholder="Nome da nova categoria...">';
+  h += '<button class="btn-add" onclick="adicionar()">+ Adicionar</button>';
+  h += '</div><br>';
+  h += '<div class="list" id="lista"></div>';
+  h += '<scr' + 'ipt>';
+  h += 'var cats=' + catsJson + ';';
+  h += 'function render(){';
+  h += '  var el=document.getElementById("lista");';
+  h += '  if(cats.length===0){el.innerHTML="<div class=empty>Nenhuma categoria</div>";return;}';
+  h += '  var html="";';
+  h += '  for(var i=0;i<cats.length;i++){';
+  h += '    html+="<div class=item><span class=nome>"+cats[i]+"</span>";';
+  h += '    html+="<div class=btns>";';
+  h += '    html+="<button class=edt data-i="+i+">Editar</button>";';
+  h += '    html+="<button class=del data-i="+i+">Excluir</button>";';
+  h += '    html+="</div></div>";';
+  h += '  }';
+  h += '  el.innerHTML=html;';
+  h += '  el.querySelectorAll(".edt").forEach(function(b){b.addEventListener("click",function(){editar(parseInt(this.dataset.i));});});';
+  h += '  el.querySelectorAll(".del").forEach(function(b){b.addEventListener("click",function(){remover(parseInt(this.dataset.i));});});';
+  h += '}';
+  h += 'render();';
+  h += 'function toast(msg){var el=document.getElementById("toast");el.textContent=msg;el.style.display="block";setTimeout(function(){el.style.display="none"},2500);}';
+  h += 'function adicionar(){';
+  h += '  var nome=document.getElementById("nova").value.trim();';
+  h += '  if(!nome){alert("Digite o nome da categoria");return;}';
+  h += '  if(cats.indexOf(nome)>=0){alert("Categoria ja existe");return;}';
+  h += '  google.script.run.withSuccessHandler(function(){';
+  h += '    cats.push(nome);render();document.getElementById("nova").value="";toast(nome+" adicionada");';
+  h += '  }).withFailureHandler(function(e){alert("Erro: "+e.message);}).adicionarCategoria(nome);';
+  h += '}';
+  h += 'function remover(i){';
+  h += '  var nome=cats[i];';
+  h += '  if(!confirm("Excluir a categoria "+nome+"?"))return;';
+  h += '  google.script.run.withSuccessHandler(function(){';
+  h += '    cats.splice(i,1);render();toast(nome+" removida");';
+  h += '  }).withFailureHandler(function(e){alert("Erro: "+e.message);}).removerCategoria(nome);';
+  h += '}';
+  h += 'function editar(i){';
+  h += '  var antigo=cats[i];';
+  h += '  var novo=prompt("Novo nome para: "+antigo,antigo);';
+  h += '  if(!novo||!novo.trim()||novo.trim()===antigo)return;';
+  h += '  novo=novo.trim();';
+  h += '  if(cats.indexOf(novo)>=0){alert("Ja existe uma categoria com esse nome");return;}';
+  h += '  google.script.run.withSuccessHandler(function(){';
+  h += '    cats[i]=novo;render();toast(antigo+" renomeada para "+novo);';
+  h += '  }).withFailureHandler(function(e){alert("Erro: "+e.message);}).renomearCategoria(antigo,novo);';
+  h += '}';
+  h += 'document.getElementById("nova").addEventListener("keydown",function(e){if(e.key==="Enter")adicionar();});';
+  h += '</scr' + 'ipt></body></html>';
+
+  var output = HtmlService.createHtmlOutput(h)
+    .setWidth(400).setHeight(500).setTitle('Gerenciar Categorias');
+  SpreadsheetApp.getUi().showSidebar(output);
+}
+
+function adicionarCategoria(nome) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var cfg = ss.getSheetByName('Config');
+  if (!cfg) throw new Error('Aba Config não encontrada');
+  var last = cfg.getLastRow();
+  cfg.getRange(last + 1, 1).setValue(nome);
+  SpreadsheetApp.flush();
+}
+
+function removerCategoria(nome) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var cfg = ss.getSheetByName('Config');
+  if (!cfg) throw new Error('Aba Config não encontrada');
+  var last = cfg.getLastRow();
+  for (var i = last; i >= 2; i--) {
+    if (cfg.getRange(i, 1).getValue() === nome) {
+      cfg.deleteRow(i);
+      SpreadsheetApp.flush();
+      return;
+    }
+  }
+  throw new Error('Categoria "' + nome + '" não encontrada');
+}
+
+function renomearCategoria(antigo, novo) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var cfg = ss.getSheetByName('Config');
+  if (!cfg) throw new Error('Aba Config não encontrada');
+  var last = cfg.getLastRow();
+  for (var i = 2; i <= last; i++) {
+    if (cfg.getRange(i, 1).getValue() === antigo) {
+      cfg.getRange(i, 1).setValue(novo);
+      SpreadsheetApp.flush();
+      return;
+    }
+  }
+  throw new Error('Categoria "' + antigo + '" não encontrada');
+}
+
+function obterCategorias() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var cfg = ss.getSheetByName('Config');
+  if (!cfg) return [];
+  var last = cfg.getLastRow();
+  if (last < 2) return [];
+  return cfg.getRange('A2:A' + last).getValues()
+    .map(function(r) { return r[0]; })
+    .filter(function(v) { return v !== '' && v !== null; });
+}
+
+function adicionarLancamento(dados) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Lancamentos');
+  if (!sheet) throw new Error('Aba "Lancamentos" não encontrada!');
+
+  var dataObj = new Date(dados.data + 'T12:00:00');
+  var valor = parseFloat(dados.valor);
+  if (isNaN(valor) || valor <= 0) throw new Error('Valor inválido');
+
+  sheet.appendRow([
+    dados.tipo,
+    dataObj,
+    dados.descricao,
+    dados.categoria,
+    dados.responsavel,
+    parseInt(dados.ciclo),
+    valor,
+    dados.status
+  ]);
+
+  // Formatar a nova linha
+  var lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('dd/MM/yyyy');
+  sheet.getRange(lastRow, 7).setNumberFormat('#,##0.00');
+
+  SpreadsheetApp.flush();
+  return 'OK';
+}
+
+// ═══════════════════════════════════════════════════════
+//  GRÁFICOS NATIVOS — criados diretamente no Google Sheets
+// ═══════════════════════════════════════════════════════
+function criarGraficos() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dash = ss.getSheetByName('Dashboard');
+  if (!dash) { SpreadsheetApp.getUi().alert('Aba "Dashboard" não encontrada!'); return; }
+
+  // Remove gráficos existentes para recriar
+  var charts = dash.getCharts();
+  for (var i = 0; i < charts.length; i++) { dash.removeChart(charts[i]); }
+
+  // Forçar cálculo de TODAS as fórmulas
+  SpreadsheetApp.flush();
+
+  // ── Ler valores CALCULADOS (não fórmulas) ──
+  var recC1  = Number(dash.getRange('B11').getValue()) || 0;
+  var recC2  = Number(dash.getRange('C11').getValue()) || 0;
+  var despC1 = Number(dash.getRange('B12').getValue()) || 0;
+  var despC2 = Number(dash.getRange('C12').getValue()) || 0;
+
+  // Escrever dados do gráfico de barras como VALORES (colunas M-O, fora da tela)
+  dash.getRange('M1').setValue('');
+  dash.getRange('N1').setValue('Receitas');
+  dash.getRange('O1').setValue('Despesas');
+  dash.getRange('M2').setValue('Ciclo 1');
+  dash.getRange('N2').setValue(recC1);
+  dash.getRange('O2').setValue(despC1);
+  dash.getRange('M3').setValue('Ciclo 2');
+  dash.getRange('N3').setValue(recC2);
+  dash.getRange('O3').setValue(despC2);
+  dash.getRange('N2:O3').setNumberFormat('#,##0.00');
+  dash.getRange('M1:O3').setFontColor('#FFFFFF');
+
+  // Escrever dados do gráfico de rosca como VALORES
+  var catNames = dash.getRange('F8:F15').getValues().flat();
+  var catVals  = dash.getRange('G8:G15').getValues().flat();
+  for (var c = 0; c < catNames.length; c++) {
+    dash.getRange('M' + (5+c)).setValue(catNames[c]).setFontColor('#FFFFFF');
+    dash.getRange('N' + (5+c)).setValue(Number(catVals[c]) || 0).setNumberFormat('#,##0.00').setFontColor('#FFFFFF');
+  }
+
+  SpreadsheetApp.flush();
+
+  // ── Gráfico 1: Barras ──
+  var chartRow = 21;
+  var barChart = dash.newChart()
+    .setChartType(Charts.ChartType.COLUMN)
+    .addRange(dash.getRange('M1:O3'))
+    .setNumHeaders(1)
+    .setPosition(chartRow, 1, 0, 0)
+    .setOption('title', 'Receitas vs Despesas por Ciclo')
+    .setOption('titleTextStyle', {fontSize: 13, bold: true, color: '#1B2A4A'})
+    .setOption('colors', ['#27AE60', '#E74C3C'])
+    .setOption('legend', {position: 'bottom', textStyle: {fontSize: 10}})
+    .setOption('vAxis', {format: '#,##0', textStyle: {fontSize: 9}, gridlines: {color: '#E8E8E8'}})
+    .setOption('chartArea', {left: 70, top: 35, width: '70%', height: '65%'})
+    .setOption('bar', {groupWidth: '55%'})
+    .setOption('backgroundColor', {fill: '#FAFBFC'})
+    .setOption('width', 380)
+    .setOption('height', 280)
+    .build();
+  dash.insertChart(barChart);
+
+  // ── Gráfico 2: Rosca ──
+  var donutChart = dash.newChart()
+    .setChartType(Charts.ChartType.PIE)
+    .addRange(dash.getRange('M5:N12'))
+    .setNumHeaders(0)
+    .setPosition(chartRow, 6, 0, 0)
+    .setOption('title', 'Gastos por Categoria')
+    .setOption('titleTextStyle', {fontSize: 13, bold: true, color: '#1B2A4A'})
+    .setOption('pieHole', 0.4)
+    .setOption('colors', ['#3498DB','#E74C3C','#F1C40F','#27AE60','#9B59B6','#E67E22','#1ABC9C','#95A5A6'])
+    .setOption('legend', {position: 'labeled', textStyle: {fontSize: 9}})
+    .setOption('chartArea', {left: 10, top: 35, width: '90%', height: '70%'})
+    .setOption('backgroundColor', {fill: '#FAFBFC'})
+    .setOption('width', 380)
+    .setOption('height', 280)
+    .build();
+  dash.insertChart(donutChart);
+
+  // Feedback
+  SpreadsheetApp.getUi().alert(
+    'Graficos criados!\n\n' +
+    'Para atualizar os dados dos graficos, execute novamente:\n' +
+    'Menu Controle > Criar Graficos no Dashboard'
+  );
+}
+
+// ═══ Formulário ═══
+function abrirFormulario() {
+  var cats = obterCategorias();
+  var catsJson = JSON.stringify(cats);
+
+  var htmlContent = '\
+<!DOCTYPE html>\
+<html>\
+<head>\
+<style>\
+  * { box-sizing: border-box; margin: 0; padding: 0; }\
+  body { font-family: "Google Sans", "Segoe UI", Roboto, sans-serif; padding: 20px; background: #FAFBFC; color: #1B2A4A; }\
+  h2 { font-size: 20px; margin-bottom: 20px; text-align: center; }\
+  .group { margin-bottom: 14px; }\
+  label { display: block; font-size: 11px; font-weight: 700; color: #5F6368; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }\
+  select, input[type="text"], input[type="number"], input[type="date"] {\
+    width: 100%; padding: 10px 12px; border: 2px solid #E0E0E0; border-radius: 8px;\
+    font-size: 14px; background: white; color: #1B2A4A; transition: border-color 0.2s;\
+  }\
+  select:focus, input:focus { border-color: #2980B9; outline: none; box-shadow: 0 0 0 3px rgba(41,128,185,0.15); }\
+  .row { display: flex; gap: 10px; }\
+  .row > .group { flex: 1; }\
+  .tipo-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 4px; }\
+  .badge-receita { background: #E8F5E9; color: #1E8449; }\
+  .badge-despesa { background: #FFEBEE; color: #E74C3C; }\
+  .separator { height: 1px; background: #E8E8E8; margin: 18px 0; }\
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }\
+  .btn-go { background: #27AE60; color: white; }\
+  .btn-go:hover { background: #1E8449; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(39,174,96,0.35); }\
+  .btn-go:active { transform: translateY(0); }\
+  .btn-go:disabled { background: #95D5B2; cursor: wait; transform: none; box-shadow: none; }\
+  .toast { position: fixed; top: 16px; left: 16px; right: 16px; padding: 12px; border-radius: 10px; font-weight: 600; font-size: 14px;\
+           text-align: center; display: none; z-index: 999; animation: pop 0.3s ease; }\
+  .toast-ok { background: #E8F5E9; color: #1E8449; border: 1px solid #A5D6A7; }\
+  .toast-err { background: #FFEBEE; color: #C62828; border: 1px solid #EF9A9A; }\
+  @keyframes pop { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }\
+  .counter { text-align: center; font-size: 12px; color: #999; margin-top: 12px; }\
+</style>\
+</head>\
+<body>\
+  <h2>📝 Novo Lançamento</h2>\
+  <div id="toast-ok" class="toast toast-ok">✅ Lançamento adicionado!</div>\
+  <div id="toast-err" class="toast toast-err">❌ Preencha descrição, valor e data</div>\
+\
+  <div class="group">\
+    <label>Tipo</label>\
+    <select id="tipo" onchange="onTipoChange()">\
+      <option value="Despesa">📤 Despesa</option>\
+      <option value="Receita">📥 Receita</option>\
+    </select>\
+    <span id="tipoBadge" class="tipo-badge badge-despesa">DESPESA</span>\
+  </div>\
+\
+  <div class="row">\
+    <div class="group">\
+      <label>Data</label>\
+      <input type="date" id="data">\
+    </div>\
+    <div class="group">\
+      <label>Ciclo</label>\
+      <select id="ciclo">\
+        <option value="1">1 — até dia 15</option>\
+        <option value="2">2 — após dia 15</option>\
+      </select>\
+    </div>\
+  </div>\
+\
+  <div class="group">\
+    <label>Categoria</label>\
+    <select id="categoria"></select>\
+  </div>\
+      <label>Responsável</label>\
+      <select id="responsavel">\
+        <option value="Will">Will</option>\
+        <option value="Sá">Sá</option>\
+        <option value="Ambos">Ambos</option>\
+      </select>\
+    </div>\
+  </div>\
+\
+  <div class="row">\
+    <div class="group">\
+      <label>Valor (R$)</label>\
+      <input type="number" id="valor" step="0.01" min="0" placeholder="0,00">\
+    </div>\
+    <div class="group">\
+      <label>Status</label>\
+      <select id="status">\
+        <option value="Pendente">⏳ Pendente</option>\
+        <option value="Pago">✅ Pago</option>\
+        <option value="A Pagar">🔴 A Pagar</option>\
+      </select>\
+    </div>\
+  </div>\
+\
+  <div class="separator"></div>\
+  <button class="btn btn-go" onclick="enviar()" id="btnGo">✅ Adicionar Lançamento</button>\
+  <div class="counter" id="counter"></div>\
+\
+<script>\
+  var contagem = 0;\
+  var hoje = new Date();\
+  document.getElementById("data").value = hoje.toISOString().split("T")[0];\
+  document.getElementById("ciclo").value = hoje.getDate() <= 15 ? "1" : "2";\
+\
+  var cats = ' + catsJson + ';\
+  var selCat = document.getElementById("categoria");\
+  cats.forEach(function(c) {\
+    var o = document.createElement("option"); o.value = c; o.text = c; selCat.add(o);\
+  });\
+  onTipoChange();\
+\
+  function onTipoChange() {\
+    var tipo = document.getElementById("tipo").value;\
+    var badge = document.getElementById("tipoBadge");\
+    badge.textContent = tipo.toUpperCase();\
+    badge.className = "tipo-badge " + (tipo === "Receita" ? "badge-receita" : "badge-despesa");\
+    var recCats = ["Salário","13° Salário","PLR","Férias","Renda Extra"];\
+    var despCats = ["Luz","Internet","Estacionamento","Cartão Will","Cartão Sá","Celular","Areia","Unha mão"];\
+    var target = tipo === "Receita" ? recCats : despCats;\
+    for (var i = 0; i < selCat.options.length; i++) {\
+      if (target.indexOf(selCat.options[i].value) >= 0) { selCat.selectedIndex = i; break; }\
+    }\
+    var selStatus = document.getElementById("status");\
+    selStatus.innerHTML = "";\
+    if (tipo === "Receita") {\
+      selStatus.add(new Option("Pendente", "Pendente"));\
+      selStatus.add(new Option("Recebido", "Recebido"));\
+    } else {\
+      selStatus.add(new Option("Pendente", "Pendente"));\
+      selStatus.add(new Option("Pago", "Pago"));\
+      selStatus.add(new Option("A Pagar", "A Pagar"));\
+    }\
+  }\
+\
+  function toast(id, ms) {\
+    var el = document.getElementById(id); el.style.display = "block";\
+    setTimeout(function() { el.style.display = "none"; }, ms || 2500);\
+  }\
+\
+  function enviar() {\
+    var d = {\
+      tipo: document.getElementById("tipo").value,\
+      data: document.getElementById("data").value,\
+      descricao: document.getElementById("categoria").value,\
+      categoria: document.getElementById("categoria").value,\
+      responsavel: document.getElementById("responsavel").value,\
+      ciclo: document.getElementById("ciclo").value,\
+      valor: document.getElementById("valor").value,\
+      status: document.getElementById("status").value\
+    };\
+    if (!d.valor || !d.data) { toast("toast-err"); return; }\
+    var btn = document.getElementById("btnGo");\
+    btn.disabled = true; btn.textContent = "⏳ Salvando...";\
+    google.script.run\
+      .withSuccessHandler(function() {\
+        contagem++;\
+        toast("toast-ok");\
+        document.getElementById("valor").value = "";\
+        document.getElementById("counter").textContent = contagem + " lançamento(s) adicionado(s) nesta sessão";\
+        btn.disabled = false; btn.textContent = "✅ Adicionar Lançamento";\
+        document.getElementById("valor").focus();\
+      })\
+      .withFailureHandler(function(err) {\
+        alert("Erro: " + err.message);\
+        btn.disabled = false; btn.textContent = "✅ Adicionar Lançamento";\
+      })\
+      .adicionarLancamento(d);\
+  }\
+\
+  document.addEventListener("keydown", function(e) {\
+    if (e.key === "Enter" && !document.getElementById("btnGo").disabled) enviar();\
+  });\
+</script>\
+</body>\
+</html>';
+
+  var html = HtmlService.createHtmlOutput(htmlContent)
+    .setWidth(420)
+    .setHeight(620)
+    .setTitle('Novo Lançamento');
+
+  SpreadsheetApp.getUi().showSidebar(html);
+}

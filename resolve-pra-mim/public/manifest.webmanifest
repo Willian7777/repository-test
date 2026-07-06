@@ -1,0 +1,29 @@
+{
+  "name": "Resolve Pra Mim",
+  "short_name": "ResolvePraMim",
+  "description": "Entenda qualquer documento sem juridiquês. Em segundos.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#1E3A8A",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "categories": ["utilities", "productivity", "legal"],
+  "icons": [
+    { "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Nova análise",
+      "url": "/",
+      "description": "Analisar um novo documento"
+    },
+    {
+      "name": "Meu histórico",
+      "url": "/historico",
+      "description": "Ver análises anteriores"
+    }
+  ]
+}

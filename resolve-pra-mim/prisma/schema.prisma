@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // ── Desenvolvimento local (SQLite) ───────────────────────────────────────
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+
+  // ── Produção (Vercel + Supabase) — descomente para deploy ───────────────
+  // provider  = "postgresql"
+  // url       = env("DATABASE_URL")
+}
+
+// ─── NextAuth ────────────────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── Usuário ──────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("USER")   // "USER" | "ADMIN"
+  plano         String    @default("FREE")   // "FREE" | "PRO"
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts   Account[]
+  sessions   Session[]
+  contaLocal ContaLocal?
+  analises   Analise[]
+  alertas    AlertaPrazo[]
+  auditLogs  AuditLog[]
+
+  @@map("users")
+}
+
+model ContaLocal {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senhaHash String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contas_local")
+}
+
+// ─── Análises ─────────────────────────────────────────────────────────────────
+
+model Analise {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ipHash        String?                  // apenas para anônimos (rate limit)
+  tipoSugerido  String   @default("outro")
+  textoInput    String                   // texto extraído do documento
+  resultado     String                   // JSON serializado: { tipo, nivel_risco, prazo_data, ... }
+  nivelRisco    String   @default("BAIXO")
+  golpeSuspeito Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  alertas AlertaPrazo[]
+  chat    ChatMensagem[]
+
+  @@map("analises")
+}
+
+// ─── Alertas de Prazo ─────────────────────────────────────────────────────────
+
+model AlertaPrazo {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analiseId    String
+  analise      Analise  @relation(fields: [analiseId], references: [id], onDelete: Cascade)
+  prazoData    DateTime
+  enviado7dias Boolean  @default(false)
+  enviado1dia  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, analiseId])
+  @@map("alertas_prazo")
+}
+
+// ─── Chat de Acompanhamento (PRO) ─────────────────────────────────────────────
+
+model ChatMensagem {
+  id        String   @id @default(cuid())
+  analiseId String
+  analise   Analise  @relation(fields: [analiseId], references: [id], onDelete: Cascade)
+  autor     String   // "usuario" | "assistente"
+  conteudo  String
+  createdAt DateTime @default(now())
+
+  @@map("chat_mensagens")
+}
+
+// ─── Audit Log (LGPD) ─────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  acao       String
+  entidade   String?
+  entidadeId String?
+  ipHash     String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}

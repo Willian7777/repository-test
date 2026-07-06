@@ -1,0 +1,11 @@
+{
+  "regions": ["gru1"],
+  "functions": {
+    "app/api/analisar/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/chat/route.ts": {
+      "maxDuration": 20
+    }
+  }
+}

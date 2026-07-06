@@ -4,6 +4,7 @@ obj/
 
 # Publish
 publish/
+publish_out/
 
 # Visual Studio
 .vs/
@@ -15,3 +16,49 @@ publish/
 
 # Logs
 *.log
+
+# Node / Next.js
+node_modules/
+.pnp
+.pnp.js
+.next/
+out/
+dist/
+.turbo/
+.cache/
+
+# Environment variables (NUNCA commitar)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Prisma local DB
+*.db
+*.db-journal
+prisma/prisma/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Capacitor / Android build outputs
+android/.gradle/
+android/app/build/
+android/build/
+
+# Package locks (opcional manter — mantendo apenas o principal)
+# package-lock.json
+*.db-journal
