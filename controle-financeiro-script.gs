@@ -767,7 +767,7 @@ function abrirFormulario() {
   var contagem = 0;\
   var hoje = new Date();\
   document.getElementById("data").value = hoje.toISOString().split("T")[0];\
-  document.getElementById("ciclo").value = hoje.getDate() <= 15 ? "1" : "2";\
+  document.getElementById("ciclo").value = hoje.getDate() <= 14 ? "1" : "2";\
 \
   var cats = ' + catsJson + ';\
   var selCat = document.getElementById("categoria");\
