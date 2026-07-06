@@ -25,10 +25,12 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('💰 Controle')
     .addItem('📝 Novo Lançamento', 'abrirFormulario')
-    .addItem('📊 Criar Gráficos no Dashboard', 'criarGraficos')
     .addSeparator()
-    .addItem('� Gerenciar Categorias', 'gerenciarCategorias')
-    .addItem('�🗑️ Limpar Lançamentos do Mês', 'resetMes')
+    .addItem('📊 Visão do Período (C1 vs Mês)', 'mostrarResumo')
+    .addItem('📈 Criar Gráficos no Dashboard', 'criarGraficos')
+    .addSeparator()
+    .addItem('🗂️ Gerenciar Categorias', 'gerenciarCategorias')
+    .addItem('🗑️ Limpar Lançamentos do Mês', 'resetMes')
     .addSeparator()
     .addItem('🏠 Ir para Dashboard', 'irParaDashboard')
     .addToUi();
@@ -38,6 +40,129 @@ function irParaDashboard() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dash = ss.getSheetByName('Dashboard');
   if (dash) { ss.setActiveSheet(dash); dash.setActiveCell(dash.getRange('A1')); }
+}
+
+// ═══ Visão do Período: Ciclo 1 atual vs Mês completo ═══
+function mostrarResumo() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dash = ss.getSheetByName('Dashboard');
+  var sheet = ss.getSheetByName('Lancamentos');
+  if (!dash || !sheet) {
+    SpreadsheetApp.getUi().alert('Abas Dashboard ou Lancamentos não encontradas!');
+    return;
+  }
+
+  var mes  = Number(dash.getRange('B2').getValue()) || (new Date().getMonth() + 1);
+  var ano  = Number(dash.getRange('B3').getValue()) || new Date().getFullYear();
+  var meses = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+               'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var nomeMes = meses[mes] || mes;
+
+  // Calcular totais diretamente dos lançamentos para garantir precisão
+  var lastRow = sheet.getLastRow();
+  var recC1 = 0, recC2 = 0, despC1 = 0, despC2 = 0;
+  var recC1pend = 0, recC2pend = 0, despC1pend = 0, despC2pend = 0;
+
+  if (lastRow >= 2) {
+    var dados = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+    // Colunas: [0]Tipo [1]Data [2]Desc [3]Cat [4]Resp [5]Ciclo [6]Valor [7]Status
+    for (var i = 0; i < dados.length; i++) {
+      var row = dados[i];
+      var dt = row[1];
+      if (!(dt instanceof Date)) continue;
+      if ((dt.getMonth() + 1) !== mes || dt.getFullYear() !== ano) continue;
+
+      var tipo   = String(row[0]).trim();
+      var ciclo  = Number(row[5]);
+      var valor  = Number(row[6]) || 0;
+      var status = String(row[7]).trim();
+      var pend   = (status === 'Pendente' || status === 'A Pagar');
+
+      if (tipo === 'Receita') {
+        if (ciclo === 1) { recC1 += valor;  if (pend) recC1pend  += valor; }
+        else             { recC2 += valor;  if (pend) recC2pend  += valor; }
+      } else {
+        if (ciclo === 1) { despC1 += valor; if (pend) despC1pend += valor; }
+        else             { despC2 += valor; if (pend) despC2pend += valor; }
+      }
+    }
+  }
+
+  var saldoC1    = recC1 - despC1;
+  var saldoMes   = (recC1 + recC2) - (despC1 + despC2);
+  var recTotal   = recC1 + recC2;
+  var despTotal  = despC1 + despC2;
+  var pendTotal  = recC1pend + recC2pend;   // receitas ainda a receber
+  var apagarTotal = despC1pend + despC2pend; // despesas ainda a pagar
+
+  function fmt(v) {
+    return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  function cor(v) { return v >= 0 ? '#27AE60' : '#E74C3C'; }
+  function pcnt(part, total) { return total > 0 ? (part/total*100).toFixed(0)+'%' : '—'; }
+
+  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>';
+  h += '*{box-sizing:border-box;margin:0;padding:0}';
+  h += 'body{font-family:"Google Sans","Segoe UI",sans-serif;padding:16px;background:#F4F6F8;color:#1B2A4A;font-size:13px}';
+  h += 'h2{font-size:16px;text-align:center;margin-bottom:4px}';
+  h += '.sub{text-align:center;color:#888;font-size:12px;margin-bottom:16px}';
+  h += '.card{background:#FFF;border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}';
+  h += '.card h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#5F6368;margin-bottom:10px;border-bottom:1px solid #F0F0F0;padding-bottom:6px}';
+  h += '.row{display:flex;justify-content:space-between;align-items:center;padding:4px 0}';
+  h += '.lbl{color:#555}';
+  h += '.val{font-weight:700;font-size:13px}';
+  h += '.saldo{font-size:20px;font-weight:800;text-align:center;padding:10px 0 4px}';
+  h += '.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px;vertical-align:middle}';
+  h += '.tag-c1{background:#E3F2FD;color:#1976D2}';
+  h += '.tag-mes{background:#EDE7F6;color:#6A1B9A}';
+  h += '.divider{height:1px;background:#EEE;margin:8px 0}';
+  h += '.pend{color:#E67E22;font-size:11px;font-weight:600}';
+  h += '.footer{text-align:center;color:#AAA;font-size:11px;margin-top:8px}';
+  h += '</style></head><body>';
+  h += '<h2>📅 ' + nomeMes + ' / ' + ano + '</h2>';
+  h += '<div class="sub">Visão por ciclo de pagamento</div>';
+
+  // ── CARD CICLO 1 ──
+  h += '<div class="card">';
+  h += '<h3>⏱ Atual — Ciclo 1 <span class="tag tag-c1">até dia 15</span></h3>';
+  h += '<div class="row"><span class="lbl">📥 Receitas</span><span class="val" style="color:#27AE60">' + fmt(recC1) + '</span></div>';
+  if (recC1pend > 0) h += '<div class="row"><span class="pend">   ↳ a receber</span><span class="pend">' + fmt(recC1pend) + '</span></div>';
+  h += '<div class="row"><span class="lbl">📤 Despesas</span><span class="val" style="color:#E74C3C">' + fmt(despC1) + '</span></div>';
+  if (despC1pend > 0) h += '<div class="row"><span class="pend">   ↳ a pagar</span><span class="pend">' + fmt(despC1pend) + '</span></div>';
+  h += '<div class="divider"></div>';
+  h += '<div class="saldo" style="color:' + cor(saldoC1) + '">' + fmt(saldoC1) + '</div>';
+  h += '<div style="text-align:center;font-size:11px;color:#888">saldo do ciclo 1</div>';
+  h += '</div>';
+
+  // ── CARD MÊS COMPLETO ──
+  h += '<div class="card">';
+  h += '<h3>📆 Mês Completo — C1 + C2 <span class="tag tag-mes">projeção</span></h3>';
+  h += '<div class="row"><span class="lbl">📥 Total Receitas</span><span class="val" style="color:#27AE60">' + fmt(recTotal) + '</span></div>';
+  h += '<div class="row"><span class="lbl">   C1 / C2</span><span class="val" style="color:#888">' + fmt(recC1) + ' / ' + fmt(recC2) + '</span></div>';
+  if (pendTotal > 0) h += '<div class="row"><span class="pend">   ↳ a receber (total)</span><span class="pend">' + fmt(pendTotal) + '</span></div>';
+  h += '<div class="divider"></div>';
+  h += '<div class="row"><span class="lbl">📤 Total Despesas</span><span class="val" style="color:#E74C3C">' + fmt(despTotal) + '</span></div>';
+  h += '<div class="row"><span class="lbl">   C1 / C2</span><span class="val" style="color:#888">' + fmt(despC1) + ' / ' + fmt(despC2) + '</span></div>';
+  if (apagarTotal > 0) h += '<div class="row"><span class="pend">   ↳ a pagar (total)</span><span class="pend">' + fmt(apagarTotal) + '</span></div>';
+  h += '<div class="divider"></div>';
+  h += '<div class="saldo" style="color:' + cor(saldoMes) + '">' + fmt(saldoMes) + '</div>';
+  h += '<div style="text-align:center;font-size:11px;color:#888">saldo projetado do mês (' + pcnt(saldoMes, recTotal) + ' da receita)</div>';
+  h += '</div>';
+
+  // ── CARD INDICADORES ──
+  h += '<div class="card">';
+  h += '<h3>📊 Indicadores</h3>';
+  h += '<div class="row"><span class="lbl">% gasto / receita (C1)</span><span class="val">' + pcnt(despC1, recC1) + '</span></div>';
+  h += '<div class="row"><span class="lbl">% gasto / receita (mês)</span><span class="val">' + pcnt(despTotal, recTotal) + '</span></div>';
+  h += '<div class="row"><span class="lbl">% economizado (mês)</span><span class="val" style="color:' + cor(saldoMes) + '">' + pcnt(saldoMes, recTotal) + '</span></div>';
+  h += '</div>';
+
+  h += '<div class="footer">Mês/ano selecionado no Dashboard: B2 / B3</div>';
+  h += '</body></html>';
+
+  var out = HtmlService.createHtmlOutput(h)
+    .setWidth(360).setHeight(640).setTitle('Visão do Período');
+  SpreadsheetApp.getUi().showSidebar(out);
 }
 
 function resetMes() {
@@ -474,12 +599,11 @@ function abrirFormulario() {
     var selStatus = document.getElementById("status");\
     selStatus.innerHTML = "";\
     if (tipo === "Receita") {\
-      selStatus.add(new Option("Pendente", "Pendente"));\
-      selStatus.add(new Option("Recebido", "Recebido"));\
+      selStatus.add(new Option("⏳ Pendente", "Pendente"));\
+      selStatus.add(new Option("✅ Recebido", "Recebido"));\
     } else {\
-      selStatus.add(new Option("Pendente", "Pendente"));\
-      selStatus.add(new Option("Pago", "Pago"));\
-      selStatus.add(new Option("A Pagar", "A Pagar"));\
+      selStatus.add(new Option("🔴 A Pagar", "A Pagar"));\
+      selStatus.add(new Option("✅ Pago", "Pago"));\
     }\
   }\
 \
