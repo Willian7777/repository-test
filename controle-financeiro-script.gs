@@ -54,7 +54,7 @@ function mostrarResumo() {
   }
 
   var mes  = Number(dash.getRange('B2').getValue()) || (new Date().getMonth() + 1);
-  var ano  = Number(dash.getRange('B3').getValue()) || new Date().getFullYear();
+  var ano  = Number(dash.getRange('D2').getValue()) || new Date().getFullYear();
   var meses = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   var nomeMes = meses[mes] || mes;
@@ -77,7 +77,7 @@ function mostrarResumo() {
       var ciclo  = Number(row[5]);
       var valor  = Number(row[6]) || 0;
       var status = String(row[7]).trim();
-      var pend   = (status === 'Pendente' || status === 'A Pagar');
+      var pend   = (status === 'A Pagar' || status === 'A Receber');
 
       if (tipo === 'Receita') {
         if (ciclo === 1) { recC1 += valor;  if (pend) recC1pend  += valor; }
@@ -175,7 +175,7 @@ function resetMes() {
 
   // Pegar mês e ano selecionados no Dashboard
   var mes = dash ? dash.getRange('B2').getValue() : new Date().getMonth() + 1;
-  var ano = dash ? dash.getRange('B3').getValue() : new Date().getFullYear();
+  var ano = dash ? dash.getRange('D2').getValue() : new Date().getFullYear();
   var meses = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   var nomeMes = meses[mes] || mes;
@@ -226,7 +226,7 @@ function mostrarResumoAnual() {
   var dash  = ss.getSheetByName('Dashboard');
   if (!sheet) { SpreadsheetApp.getUi().alert('Aba "Lancamentos" não encontrada!'); return; }
 
-  var ano = dash ? Number(dash.getRange('B3').getValue()) : new Date().getFullYear();
+  var ano = dash ? Number(dash.getRange('D2').getValue()) : new Date().getFullYear();
   if (!ano || isNaN(ano)) ano = new Date().getFullYear();
 
   var meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -547,10 +547,10 @@ function criarGraficos() {
   SpreadsheetApp.flush();
 
   // ── Ler valores CALCULADOS (não fórmulas) ──
-  var recC1  = Number(dash.getRange('B11').getValue()) || 0;
-  var recC2  = Number(dash.getRange('C11').getValue()) || 0;
-  var despC1 = Number(dash.getRange('B12').getValue()) || 0;
-  var despC2 = Number(dash.getRange('C12').getValue()) || 0;
+  var recC1  = Number(dash.getRange('B7').getValue()) || 0;
+  var recC2  = Number(dash.getRange('C7').getValue()) || 0;
+  var despC1 = Number(dash.getRange('B9').getValue()) || 0;
+  var despC2 = Number(dash.getRange('C9').getValue()) || 0;
 
   // Escrever dados do gráfico de barras como VALORES (colunas M-O, fora da tela)
   dash.getRange('M1').setValue('');
@@ -566,8 +566,8 @@ function criarGraficos() {
   dash.getRange('M1:O3').setFontColor('#FFFFFF');
 
   // Escrever dados do gráfico de rosca como VALORES
-  var catNames = dash.getRange('F8:F15').getValues().flat();
-  var catVals  = dash.getRange('G8:G15').getValues().flat();
+  var catNames = dash.getRange('A16:A23').getValues().flat();
+  var catVals  = dash.getRange('B16:B23').getValues().flat();
   for (var c = 0; c < catNames.length; c++) {
     dash.getRange('M' + (5+c)).setValue(catNames[c]).setFontColor('#FFFFFF');
     dash.getRange('N' + (5+c)).setValue(Number(catVals[c]) || 0).setNumberFormat('#,##0.00').setFontColor('#FFFFFF');
@@ -709,9 +709,8 @@ function abrirFormulario() {
     <div class="group">\
       <label>Status</label>\
       <select id="status">\
-        <option value="Pendente">⏳ Pendente</option>\
-        <option value="Pago">✅ Pago</option>\
-        <option value="A Pagar">🔴 A Pagar</option>\
+        <option value="A Receber">🔵 A Receber</option>\
+        <option value="Recebido">✅ Recebido</option>\
       </select>\
     </div>\
   </div>\
@@ -747,7 +746,7 @@ function abrirFormulario() {
     var selStatus = document.getElementById("status");\
     selStatus.innerHTML = "";\
     if (tipo === "Receita") {\
-      selStatus.add(new Option("⏳ Pendente", "Pendente"));\
+      selStatus.add(new Option("🔵 A Receber", "A Receber"));\
       selStatus.add(new Option("✅ Recebido", "Recebido"));\
     } else {\
       selStatus.add(new Option("🔴 A Pagar", "A Pagar"));\
