@@ -31,6 +31,7 @@ function onOpen() {
     .addItem('📈 Criar Gráficos no Dashboard', 'criarGraficos')
     .addSeparator()
     .addItem('✈️ Planejamento de Viagem', 'abrirPlanejamentoViagem')
+    .addItem('🛒 Compras & Metas', 'abrirComprasMetas')
     .addSeparator()
     .addItem('🗂️ Gerenciar Categorias', 'gerenciarCategorias')
     .addItem('🗑️ Limpar Lançamentos do Mês', 'resetMes')
@@ -56,6 +57,21 @@ function abrirPlanejamentoViagem() {
     SpreadsheetApp.getUi().alert(
       '⚠️ Aba não encontrada',
       'Importe o arquivo controle-financeiro-final.xlsx atualizado para ter a aba "Planejamento Viagem".',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
+
+function abrirComprasMetas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var wm = ss.getSheetByName('Compras & Metas');
+  if (wm) {
+    ss.setActiveSheet(wm);
+    wm.setActiveCell(wm.getRange('E4'));
+  } else {
+    SpreadsheetApp.getUi().alert(
+      '⚠️ Aba não encontrada',
+      'Importe o arquivo controle-financeiro-final.xlsx atualizado para ter a aba "Compras & Metas".',
       SpreadsheetApp.getUi().ButtonSet.OK
     );
   }
