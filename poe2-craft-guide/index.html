@@ -83,6 +83,13 @@
 
       <div class="form-group">
         <label>Selecionar Moeda</label>
+        <div class="currency-category-tabs" id="currency-category-tabs">
+          <button class="cat-tab active" data-cat="standard">Padrão</button>
+          <button class="cat-tab" data-cat="ritual">Ritual</button>
+          <button class="cat-tab" data-cat="delirium">Delirium</button>
+          <button class="cat-tab" data-cat="breach">Breach</button>
+          <button class="cat-tab" data-cat="abyss">Abyss</button>
+        </div>
         <div class="currency-grid" id="currency-grid"></div>
       </div>
 
@@ -124,12 +131,12 @@
     <!-- ===================== RIGHT: RESULTS ===================== -->
     <section class="panel panel-results">
       <div class="panel-header">
-        <h2>Resultados & Planejamento</h2>
+        <h2>Planejador de Craft</h2>
       </div>
 
       <!-- DESIRED MODS -->
       <div class="desired-section">
-        <div class="section-label">Afixos Desejados</div>
+        <div class="section-label">1. Defina os Afixos Desejados</div>
         <div class="desired-list" id="desired-list">
           <p class="hint-text">Nenhum afixo desejado definido</p>
         </div>
@@ -141,11 +148,11 @@
         <button class="btn-ghost btn-sm" id="btn-toggle-desired-add">+ Adicionar Afixo</button>
       </div>
 
-      <!-- CRAFT PATH -->
-      <div class="craft-path-section" id="craft-path-section">
-        <div class="section-label">Caminho Sugerido</div>
-        <div id="craft-path-content">
-          <p class="hint-text">Selecione afixos desejados para ver sugestões</p>
+      <!-- CRAFT PATHS -->
+      <div class="craft-paths-section" id="craft-paths-section">
+        <div class="section-label">2. Rotas de Craft Disponíveis</div>
+        <div id="craft-paths-content">
+          <p class="hint-text">Selecione afixos desejados para ver as rotas</p>
         </div>
       </div>
 

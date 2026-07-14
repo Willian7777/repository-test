@@ -112,5 +112,83 @@
       "body_armour": { "modId": "armour_evasion_flat", "tier": 2 },
       "shield":      { "modId": "armour_evasion_flat", "tier": 2 }
     }
+  },
+
+  {
+    "id": "soul_core_of_ire",
+    "name": "Soul Core of Ire",
+    "color": "#d0c840",
+    "category": "ritual",
+    "description": "[Ritual] Garante afixo de Velocidade de Ataque (Suffix) em armas e acessórios.",
+    "guaranteedByItemType": {
+      "ring":            { "modId": "jewellery_attack_speed", "tier": 2 },
+      "amulet":          { "modId": "jewellery_attack_speed", "tier": 2 },
+      "one_hand_weapon": { "modId": "weapon_attack_speed",    "tier": 2 },
+      "two_hand_weapon": { "modId": "weapon_attack_speed",    "tier": 2 },
+      "bow":             { "modId": "weapon_attack_speed",    "tier": 2 }
+    }
+  },
+  {
+    "id": "soul_core_of_citaqualotl",
+    "name": "Soul Core of Citaqualotl",
+    "color": "#40b0d0",
+    "category": "ritual",
+    "description": "[Ritual] Garante afixo de Resistência Elemental (Suffix) em todos os itens equipáveis.",
+    "guaranteedByItemType": {
+      "ring":        { "modId": "jewellery_all_res",   "tier": 2 },
+      "amulet":      { "modId": "jewellery_all_res",   "tier": 2 },
+      "belt":        { "modId": "jewellery_all_res",   "tier": 2 },
+      "helmet":      { "modId": "armour_all_res",      "tier": 2 },
+      "gloves":      { "modId": "armour_all_res",      "tier": 2 },
+      "boots":       { "modId": "armour_all_res",      "tier": 2 },
+      "body_armour": { "modId": "armour_all_res",      "tier": 2 },
+      "shield":      { "modId": "armour_all_res",      "tier": 2 }
+    }
+  },
+  {
+    "id": "soul_core_of_topotante",
+    "name": "Soul Core of Topotante",
+    "color": "#d04040",
+    "category": "ritual",
+    "description": "[Ritual] Garante afixo de Força (Suffix) em todos os itens equipáveis.",
+    "guaranteedByItemType": {
+      "ring":        { "modId": "jewellery_strength",  "tier": 2 },
+      "amulet":      { "modId": "jewellery_strength",  "tier": 2 },
+      "belt":        { "modId": "jewellery_strength",  "tier": 2 },
+      "helmet":      { "modId": "armour_strength",     "tier": 2 },
+      "gloves":      { "modId": "armour_strength",     "tier": 2 },
+      "boots":       { "modId": "armour_strength",     "tier": 2 },
+      "body_armour": { "modId": "armour_strength",     "tier": 2 },
+      "shield":      { "modId": "armour_strength",     "tier": 2 }
+    }
+  },
+  {
+    "id": "soul_core_of_zalatl",
+    "name": "Soul Core of Zalatl",
+    "color": "#60d060",
+    "category": "ritual",
+    "description": "[Ritual] Garante afixo de Vida Máxima T1 (Prefix) em todos os itens equipáveis. Soul Core mais valorizado do Ritual.",
+    "guaranteedByItemType": {
+      "ring":        { "modId": "jewellery_life",  "tier": 1 },
+      "amulet":      { "modId": "jewellery_life",  "tier": 1 },
+      "belt":        { "modId": "jewellery_life",  "tier": 1 },
+      "helmet":      { "modId": "armour_life",     "tier": 1 },
+      "gloves":      { "modId": "armour_life",     "tier": 1 },
+      "boots":       { "modId": "armour_life",     "tier": 1 },
+      "body_armour": { "modId": "armour_life",     "tier": 1 },
+      "shield":      { "modId": "armour_life",     "tier": 1 }
+    }
+  },
+  {
+    "id": "soul_core_of_jiquani",
+    "name": "Soul Core of Jiquani",
+    "color": "#d08040",
+    "category": "ritual",
+    "description": "[Ritual] Garante afixo de Dano Físico % T1 (Prefix) em armas. Ideal para builds de dano físico.",
+    "guaranteedByItemType": {
+      "one_hand_weapon": { "modId": "weapon_phys_pct",  "tier": 1 },
+      "two_hand_weapon": { "modId": "weapon_phys_pct",  "tier": 1 },
+      "bow":             { "modId": "weapon_phys_pct",  "tier": 1 }
+    }
   }
 ]

@@ -24,6 +24,9 @@ const STATE = {
   history:          [],            // array of cloned states
   currencySpent:    {},            // {currencyId: count}
   activeTab:        'prefix',
+  currencyCategory: 'standard',   // active currency category tab
+  fortuneActive:    false,         // Omen of Fortune buff
+  quality:          {},            // {type: pct} quality boosts applied
 };
 
 // ============================================================
@@ -33,6 +36,12 @@ const getMod      = id => DATA.mods.find(m => m.id === id);
 const getItem     = id => DATA.items.find(i => i.id === id);
 const getCurrency = id => DATA.currency.find(c => c.id === id);
 const getEssence  = id => DATA.essences.find(e => e.id === id);
+
+// Retorna o baseType do item atual (ex: "amulet" para "gold_amulet")
+function getBaseType() {
+  const item = getItem(STATE.itemType);
+  return item ? (item.baseType || STATE.itemType) : STATE.itemType;
+}
 
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -47,6 +56,8 @@ function cloneState() {
     suffixes:      STATE.suffixes.map(s => s ? { ...s } : null),
     desiredMods:   [...STATE.desiredMods],
     currencySpent: { ...STATE.currencySpent },
+    fortuneActive: STATE.fortuneActive,
+    quality:       { ...STATE.quality },
   };
 }
 
@@ -58,6 +69,8 @@ function restoreState(snapshot) {
   STATE.suffixes      = snapshot.suffixes.map(s => s ? { ...s } : null);
   STATE.desiredMods   = [...snapshot.desiredMods];
   STATE.currencySpent = { ...snapshot.currencySpent };
+  STATE.fortuneActive = snapshot.fortuneActive || false;
+  STATE.quality       = snapshot.quality ? { ...snapshot.quality } : {};
 }
 
 function rarityLabel(r) {
@@ -118,9 +131,10 @@ function compactSlots() {
 // ============================================================
 function getPoolForType(type, excludeGroups) {
   if (!STATE.itemType) return [];
+  const baseType = getBaseType();
   return DATA.mods.filter(mod =>
     mod.type === type &&
-    mod.itemTypes.includes(STATE.itemType) &&
+    mod.itemTypes.includes(baseType) &&
     !excludeGroups.includes(mod.group) &&
     mod.tiers.some(t => STATE.ilvl >= t.minIlvl)
   );
@@ -351,9 +365,127 @@ function applyCurrency(currencyId) {
       STATE.suffixes = [null, null, null];
       break;
     }
+
+    case 'upgrade_mod_tier': {
+      const allSlots = [
+        ...STATE.prefixes.map((m, i) => m ? { arr: 'prefix', idx: i } : null),
+        ...STATE.suffixes.map((m, i) => m ? { arr: 'suffix', idx: i } : null),
+      ].filter(Boolean);
+      const upgradeable = allSlots.filter(({ arr, idx }) => {
+        const slot = arr === 'prefix' ? STATE.prefixes[idx] : STATE.suffixes[idx];
+        const mod = getMod(slot.id);
+        if (!mod) return false;
+        const valid = mod.tiers.filter(t => STATE.ilvl >= t.minIlvl);
+        const ci = valid.findIndex(t => t.tier === slot.tier);
+        return ci > 0; // tier 1 é index 0 (melhor), ci > 0 significa que pode melhorar
+      });
+      if (!upgradeable.length) {
+        showNotification('Nenhum afixo pode ser melhorado — todos já estão no tier máximo.', 'danger');
+        STATE.history.pop(); return;
+      }
+      const chosen = upgradeable[randInt(0, upgradeable.length - 1)];
+      const slotArr = chosen.arr === 'prefix' ? STATE.prefixes : STATE.suffixes;
+      const slot = slotArr[chosen.idx];
+      const mod = getMod(slot.id);
+      const valid = mod.tiers.filter(t => STATE.ilvl >= t.minIlvl);
+      const ci = valid.findIndex(t => t.tier === slot.tier);
+      const nextTier = valid[ci - 1];
+      slotArr[chosen.idx] = {
+        ...slot,
+        tier:   nextTier.tier,
+        value:  randInt(nextTier.minVal,  nextTier.maxVal),
+        value2: mod.hasTwoValues ? randInt(nextTier.minVal2, nextTier.maxVal2) : null,
+      };
+      break;
+    }
+
+    case 'reroll_two_mods': {
+      // Omen of Dominance — garante exatamente 1 prefix + 1 suffix
+      const { prefixes, suffixes } = rollNMods(1, 1);
+      applyModsToState(prefixes, suffixes);
+      break;
+    }
+
+    case 'fortune_buff': {
+      STATE.fortuneActive = true;
+      showNotification('Bênção da Fortuna ativa! A próxima moeda tem 33% de chance de ser aplicada novamente de graça.', 'success');
+      STATE.currencySpent[currencyId] = (STATE.currencySpent[currencyId] || 0) + 1;
+      renderAll();
+      return; // não precisa de mais processamento
+    }
+
+    case 'add_quality': {
+      const item = getItem(STATE.itemType);
+      if (!item || !currency.applicableCategories?.includes(item.category)) {
+        showNotification(`${currency.name} só pode ser usada em acessórios (Anel, Amuleto, Cinto).`, 'danger');
+        STATE.history.pop(); return;
+      }
+      const qt = currency.qualityType;
+      STATE.quality[qt] = Math.min(100, (STATE.quality[qt] || 0) + 20);
+      showNotification(
+        `${currency.name} aplicada! +20% Qualidade ${currency.qualityDescription}. ` +
+        `Total ${qt}: ${STATE.quality[qt]}%. Pesos de mods compatíveis aumentados.`,
+        'success'
+      );
+      STATE.currencySpent[currencyId] = (STATE.currencySpent[currencyId] || 0) + 1;
+      renderAll();
+      return;
+    }
+
+    case 'corrupt': {
+      const corruptMods = ['Imune a Sangramento (Corrupção)', 'Imune a Maldição (Corrupção)',
+        '+1 ao Nível de Gemas de Suporte (Corrupção)', 'Habilidades causam 1 Dano de Raio extra (Corrupção)',
+        '+2 ao Nível de Gemas de Área (Corrupção)', 'Projéteis perfuram 1 alvo adicional (Corrupção)',
+        'Ataques têm 10% de chance de causar Cegueira (Corrupção)'];
+      const roll = Math.random();
+      if (roll < 0.25) {
+        // Adiciona mod de corrupção
+        showNotification(`Corrompido! Mod adicionado: "${corruptMods[randInt(0, corruptMods.length - 1)]}"`, 'success');
+      } else if (roll < 0.5) {
+        // Remove um afixo aleatório
+        const allCorrupt = [
+          ...STATE.prefixes.map((m, i) => m ? { arr: 'prefix', idx: i } : null),
+          ...STATE.suffixes.map((m, i) => m ? { arr: 'suffix', idx: i } : null),
+        ].filter(Boolean);
+        if (allCorrupt.length) {
+          const c2 = allCorrupt[randInt(0, allCorrupt.length - 1)];
+          if (c2.arr === 'prefix') STATE.prefixes[c2.idx] = null;
+          else STATE.suffixes[c2.idx] = null;
+          compactSlots();
+        }
+        showNotification('Corrompido! Um afixo foi removido pelo processo de corrupção.', 'danger');
+      } else if (roll < 0.75) {
+        // Rerolha valores
+        const reroll = slots => slots.map(slot => {
+          if (!slot) return null;
+          const m = getMod(slot.id); if (!m) return slot;
+          const tv = m.tiers.filter(t => STATE.ilvl >= t.minIlvl);
+          const t2 = tv.find(x => x.tier === slot.tier) || tv[tv.length - 1];
+          if (!t2) return slot;
+          return { ...slot, value: randInt(t2.minVal, t2.maxVal), value2: m.hasTwoValues ? randInt(t2.minVal2, t2.maxVal2) : null };
+        });
+        STATE.prefixes = reroll(STATE.prefixes);
+        STATE.suffixes = reroll(STATE.suffixes);
+        showNotification('Corrompido! Valores dos afixos foram rerolhados pela corrupção.', 'warning');
+      } else {
+        showNotification('Corrompido! Nenhuma mudança nos afixos (item apenas marcado como corrompido).', 'info');
+      }
+      break;
+    }
   }
 
   STATE.currencySpent[currencyId] = (STATE.currencySpent[currencyId] || 0) + 1;
+
+  // Omen of Fortune — 33% de chance de reaplicar a mesma moeda de graça
+  if (STATE.fortuneActive && currency.action !== 'fortune_buff') {
+    STATE.fortuneActive = false;
+    if (Math.random() < 0.333) {
+      showNotification('Bênção da Fortuna ativou! Moeda aplicada novamente de graça!', 'success');
+      applyCurrency(currencyId);
+      return;
+    }
+  }
+
   renderAll();
 }
 
@@ -365,7 +497,8 @@ function applyEssence(essenceId) {
   if (!essence) return;
   if (!STATE.itemType) { showNotification('Selecione um tipo de item primeiro.', 'danger'); return; }
 
-  const guaranteed = essence.guaranteedByItemType[STATE.itemType];
+  const baseType = getBaseType();
+  const guaranteed = essence.guaranteedByItemType[baseType];
   if (!guaranteed) {
     showNotification(`Esta essência não pode ser usada em ${getItem(STATE.itemType)?.name}.`, 'danger');
     return;
@@ -438,172 +571,8 @@ function undoLastAction() {
 }
 
 // ============================================================
-// CRAFT PATH GENERATOR
+// CRAFT PATH GENERATOR — Multi-caminho
 // ============================================================
-function generateCraftPath() {
-  if (!STATE.itemType || !STATE.desiredMods.length) return null;
-
-  const desired     = STATE.desiredMods.map(getMod).filter(Boolean);
-  const desiredPre  = desired.filter(m => m.type === 'prefix');
-  const desiredSuf  = desired.filter(m => m.type === 'suffix');
-
-  const currentPre  = STATE.prefixes.filter(Boolean).map(s => getMod(s.id)).filter(Boolean);
-  const currentSuf  = STATE.suffixes.filter(Boolean).map(s => getMod(s.id)).filter(Boolean);
-
-  const hasAll = desired.every(m => {
-    const arr = m.type === 'prefix' ? STATE.prefixes : STATE.suffixes;
-    return arr.some(s => s?.id === m.id);
-  });
-
-  const steps = [];
-  let stepNum = 1;
-
-  const addStep = (text, type = 'medium', subtext = '') => {
-    steps.push({ num: stepNum++, text, type, subtext });
-  };
-
-  // Already has all desired mods?
-  if (hasAll) {
-    addStep('Parabéns! Item já possui todos os afixos desejados.', 'step-high');
-    const hasLowValues = desired.some(m => {
-      const slot = (m.type === 'prefix' ? STATE.prefixes : STATE.suffixes).find(s => s?.id === m.id);
-      if (!slot) return false;
-      const tier = m.tiers.find(t => t.tier === slot.tier);
-      if (!tier) return false;
-      const range = tier.maxVal - tier.minVal;
-      return range > 0 && slot.value < tier.minVal + range * 0.6;
-    });
-    if (hasLowValues) {
-      addStep('Valores abaixo do ideal detectados. Use Divine Orb para rerolhar os valores numéricos.', 'step-info',
-        'Divine Orb mantém os afixos, apenas rerolha os números dentro do range do tier.');
-    }
-    return steps;
-  }
-
-  // Check essence options
-  const essenceOptions = DATA.essences.filter(e => {
-    const g = e.guaranteedByItemType[STATE.itemType];
-    return g && desired.some(m => m.id === g.modId);
-  });
-
-  if (essenceOptions.length) {
-    const ess = essenceOptions[0];
-    const g = ess.guaranteedByItemType[STATE.itemType];
-    const mod = getMod(g.modId);
-    addStep(
-      `Use <strong>${ess.name}</strong> para garantir "${mod?.displayName}" no item.`,
-      'step-high',
-      `Essências requerem item Normal. Use Orb of Scouring se necessário antes.`
-    );
-  }
-
-  // Strategy based on rarity and desired count
-  if (STATE.rarity === 'normal') {
-    if (desired.length > 2 || desiredPre.length > 1 || desiredSuf.length > 1) {
-      addStep(
-        'Use <strong>Orb of Alchemy</strong> para criar um item Raro com 4–6 afixos aleatórios.',
-        'step-medium',
-        `Chance por tentativa de rolar os afixos desejados: ~${estimateCombinedProb(desired)}%`
-      );
-      addStep(
-        'Se os afixos não forem desejados, use <strong>Chaos Orb</strong> para rerolhar tudo.',
-        'step-medium',
-        'Repita até conseguir a combinação desejada.'
-      );
-    } else if (desired.length <= 2) {
-      addStep(
-        'Use <strong>Orb of Transmutation</strong> para criar um item Mágico com 1–2 afixos.',
-        'step-medium',
-        'O item Mágico pode ter apenas 1 prefix + 1 suffix.'
-      );
-      if (desired.length === 2) {
-        addStep(
-          'Se o item ficou com apenas 1 afixo desejado, use <strong>Orb of Augmentation</strong> para adicionar mais 1.',
-          'step-info',
-          'Augmentation só pode ser usado se houver slot vazio.'
-        );
-      }
-      addStep(
-        'Se os afixos não forem os desejados, use <strong>Orb of Alteration</strong> para rerolhar.',
-        'step-medium',
-        `Chance de acertar por tentativa: ~${estimateCombinedProb(desired)}%`
-      );
-    }
-  } else if (STATE.rarity === 'magic') {
-    const matchPre = currentPre.filter(m => desiredPre.some(d => d.id === m.id));
-    const matchSuf = currentSuf.filter(m => desiredSuf.some(d => d.id === m.id));
-
-    if (!matchPre.length && !matchSuf.length) {
-      addStep('Use <strong>Orb of Alteration</strong> para rerolhar os afixos do item Mágico.', 'step-medium',
-        `Chance de acertar por tentativa: ~${estimateCombinedProb(desired)}%`);
-    } else {
-      const missing = desired.filter(m => {
-        const arr = m.type === 'prefix' ? currentPre : currentSuf;
-        return !arr.some(c => c.id === m.id);
-      });
-      if (missing.length > 0) {
-        const openPre = 1 - currentPre.length;
-        const openSuf = 1 - currentSuf.length;
-        const canAug = openPre > 0 || openSuf > 0;
-        if (canAug) {
-          addStep('Use <strong>Orb of Augmentation</strong> para adicionar o afixo em falta.', 'step-high',
-            `Chance de rolar "${missing[0]?.displayName}": ~${estimateSingleProb(missing[0])}%`);
-        } else {
-          addStep('Use <strong>Regal Orb</strong> para evoluir para Raro e adicionar mais 1 afixo.', 'step-medium');
-          addStep('Em seguida, use <strong>Exalted Orb</strong> para completar os afixos restantes.', 'step-info',
-            'Exalted Orb adiciona 1 afixo aleatório em slots vazios de itens Raros.');
-        }
-      }
-    }
-  } else if (STATE.rarity === 'rare') {
-    const matchPre = currentPre.filter(m => desiredPre.some(d => d.id === m.id));
-    const matchSuf = currentSuf.filter(m => desiredSuf.some(d => d.id === m.id));
-    const allMatch = desired.filter(m => {
-      const arr = m.type === 'prefix' ? currentPre : currentSuf;
-      return arr.some(c => c.id === m.id);
-    });
-
-    if (!allMatch.length) {
-      addStep('Use <strong>Chaos Orb</strong> para rerolhar todos os afixos do item Raro.', 'step-medium',
-        `Chance de acertar por tentativa: ~${estimateCombinedProb(desired)}%`);
-      addStep('Repita os Chaos Orbs até conseguir o máximo de afixos desejados.', 'step-medium');
-    } else if (allMatch.length < desired.length) {
-      const hasPre = matchPre.length > 0;
-      const hasSuf = matchSuf.length > 0;
-      const missingItems = desired.filter(m => {
-        const arr = m.type === 'prefix' ? currentPre : currentSuf;
-        return !arr.some(c => c.id === m.id);
-      });
-      const missingNames = missingItems.map(m => `"${m.displayName}"`).join(', ');
-
-      const openPre = 3 - currentPre.length;
-      const openSuf = 3 - currentSuf.length;
-
-      if (openPre > 0 || openSuf > 0) {
-        addStep(`Use <strong>Exalted Orb</strong> para adicionar um afixo em slot vazio.`, 'step-high',
-          `Faltam: ${missingNames}`);
-        if (missingItems.length > 1 && (openPre + openSuf) >= missingItems.length) {
-          addStep('Repita com mais Exalted Orbs para preencher os slots restantes.', 'step-info');
-        }
-      } else {
-        // No open slots — need to Annul
-        addStep(
-          `<strong>Orb of Annulment</strong>: remova 1 afixo indesejado para abrir um slot.`,
-          'step-danger',
-          `⚠ RISCO: há ${(currentPre.length + currentSuf.length)} afixos no item, probabilidade de acertar um indesejado: ~${estimateAnnulProb(desired)}%`
-        );
-        addStep('Se conseguir remover o afixo indesejado, use <strong>Exalted Orb</strong> para adicionar os afixos em falta.', 'step-info');
-      }
-    }
-  }
-
-  if (steps.length === 0) {
-    addStep('Continue a aplicar moedas de craft conforme o estado do item.', 'step-info');
-  }
-
-  return steps;
-}
-
 function estimateSingleProb(mod) {
   if (!mod) return 0;
   const pool = calculateProbabilities(getPoolForType(mod.type, []));
@@ -614,16 +583,13 @@ function estimateSingleProb(mod) {
 function estimateCombinedProb(desired) {
   if (!desired.length) return 0;
   let combined = 1;
-  const usedPre = [];
-  const usedSuf = [];
+  const usedPre = [], usedSuf = [];
   for (const mod of desired) {
     const pool = calculateProbabilities(getPoolForType(mod.type, mod.type === 'prefix' ? usedPre : usedSuf));
     const entry = pool.find(m => m.id === mod.id);
-    const prob = entry ? entry.probability / 100 : 0;
-    combined *= prob;
-    const g = mod.group;
-    if (mod.type === 'prefix') usedPre.push(g);
-    else usedSuf.push(g);
+    combined *= entry ? entry.probability / 100 : 0;
+    if (mod.type === 'prefix') usedPre.push(mod.group);
+    else usedSuf.push(mod.group);
   }
   return (combined * 100).toFixed(2);
 }
@@ -637,6 +603,284 @@ function estimateAnnulProb(desired) {
   const undesired = all.length - desiredOnItem.length;
   if (all.length === 0) return 0;
   return ((undesired / all.length) * 100).toFixed(0);
+}
+
+function estimateAvgAttempts(prob) {
+  const p = parseFloat(prob);
+  if (!p || p <= 0) return '?';
+  return Math.round(100 / p);
+}
+
+// Retorna array de { id, name, badge, badgeColor, costLabel, steps[], available }
+function generateAllCraftPaths() {
+  if (!STATE.itemType || !STATE.desiredMods.length) return null;
+
+  const desired    = STATE.desiredMods.map(getMod).filter(Boolean);
+  const desiredPre = desired.filter(m => m.type === 'prefix');
+  const desiredSuf = desired.filter(m => m.type === 'suffix');
+  const combProb   = estimateCombinedProb(desired);
+  const avgChaos   = estimateAvgAttempts(combProb);
+
+  const currentPre = STATE.prefixes.filter(Boolean).map(s => getMod(s.id)).filter(Boolean);
+  const currentSuf = STATE.suffixes.filter(Boolean).map(s => getMod(s.id)).filter(Boolean);
+
+  // Mods do item que batem com o desejado
+  const matchedDesired = desired.filter(m => {
+    const arr = m.type === 'prefix' ? STATE.prefixes : STATE.suffixes;
+    return arr.some(s => s?.id === m.id);
+  });
+  const hasAll = matchedDesired.length === desired.length;
+
+  const baseType = getBaseType();
+
+  // Essências disponíveis para mods desejados
+  const essenceOptions = DATA.essences.filter(e => {
+    if (e.category === 'ritual') return false; // Soul Cores tratados separado
+    const g = e.guaranteedByItemType[baseType];
+    return g && desired.some(m => m.id === g.modId);
+  });
+  const soulCoreOptions = DATA.essences.filter(e => {
+    if (e.category !== 'ritual') return false;
+    const g = e.guaranteedByItemType[baseType];
+    return g && desired.some(m => m.id === g.modId);
+  });
+
+  const paths = [];
+
+  // ── CAMINHO 0: Item já perfeito ────────────────────────────────────────────
+  if (hasAll) {
+    const lowValues = desired.some(m => {
+      const slot = (m.type === 'prefix' ? STATE.prefixes : STATE.suffixes).find(s => s?.id === m.id);
+      if (!slot) return false;
+      const tier = m.tiers.find(t => t.tier === slot.tier);
+      if (!tier) return false;
+      const range = tier.maxVal - tier.minVal;
+      return range > 0 && slot.value < tier.minVal + range * 0.6;
+    });
+    paths.push({
+      id: 'already_done',
+      name: '✓ Item Completo',
+      badge: 'Feito',
+      badgeColor: '#60b060',
+      costLabel: 'Sem custo',
+      available: true,
+      steps: [
+        { num: 1, text: '🎉 Item já possui todos os afixos desejados!', type: 'step-high', subtext: '' },
+        ...(lowValues ? [{ num: 2, text: 'Valores abaixo do ideal detectados. Use <strong>Divine Orb</strong> (padrão) ou <strong>Omen of Refreshment</strong> (Ritual) para rerolhar os números.', type: 'step-info', subtext: 'Ambos mantêm os afixos e apenas ajustam os valores numéricos.' }] : []),
+      ]
+    });
+    return paths;
+  }
+
+  // ── CAMINHO A: Alteration / Aug / Regal (1-2 mods desejados) ──────────────
+  if (desired.length <= 2 && desiredPre.length <= 1 && desiredSuf.length <= 1) {
+    const pA = [];
+    let sn = 1;
+    const add = (text, type, sub = '') => pA.push({ num: sn++, text, type, subtext: sub });
+    if (STATE.rarity !== 'normal') add('Use <strong>Orb of Scouring</strong> para limpar o item (Normal).', 'step-medium');
+    add('Use <strong>Orb of Transmutation</strong> para transformar em Mágico.', 'step-medium');
+    add(`Use <strong>Orb of Alteration</strong> repetidamente até conseguir o(s) afixo(s) desejado(s).`, 'step-medium',
+      `Chance por rolagem: ~${combProb}% | Média: ~${avgChaos} Alterations`);
+    if (desired.length === 2)
+      add('Se caiu só 1 afixo desejado, use <strong>Orb of Augmentation</strong> para adicionar o segundo.', 'step-info',
+        'Aug só funciona se houver slot livre no item Mágico.');
+    add('Use <strong>Regal Orb</strong> para evoluir para Raro (+1 mod aleatório) quando tiver os mods desejados.', 'step-medium');
+    add('Use <strong>Exalted Orb</strong> para completar os slots restantes do item Raro.', 'step-info');
+    add('Use <strong>Divine Orb</strong> para otimizar os valores numéricos dos afixos.', 'step-info');
+    paths.push({
+      id: 'alt_aug_regal', name: 'Alt → Aug → Regal', badge: 'Econômico', badgeColor: '#60b060',
+      costLabel: `~${avgChaos} Alterations`, available: true, steps: pA
+    });
+  }
+
+  // ── CAMINHO B: Spam de Chaos (3+ mods ou item Raro) ────────────────────────
+  {
+    const pB = [];
+    let sn = 1;
+    const add = (text, type, sub = '') => pB.push({ num: sn++, text, type, subtext: sub });
+    if (STATE.rarity === 'normal') add('Use <strong>Orb of Alchemy</strong> para criar um item Raro.', 'step-medium');
+    add(`Spam <strong>Chaos Orb</strong> até acertar os afixos desejados.`, 'step-medium',
+      `Chance por rolagem: ~${combProb}% | Média: ~${avgChaos} Chaos Orbs`);
+    add('Quando acertar o melhor afixo desejado, pare e analise o restante.', 'step-info');
+    if (desired.length >= 2)
+      add('Se o item tiver pelo menos 1 desejado e slots vazios, use <strong>Exalted Orb</strong> para completar.', 'step-info');
+    add('Use <strong>Divine Orb</strong> para maximizar os valores numéricos dos afixos.', 'step-info');
+    paths.push({
+      id: 'chaos_spam', name: 'Spam de Chaos', badge: desired.length >= 3 ? 'Caótico' : 'Padrão', badgeColor: '#d4924a',
+      costLabel: `~${avgChaos} Chaos`, available: true, steps: pB
+    });
+  }
+
+  // ── CAMINHO C: Via Essência + Completar ────────────────────────────────────
+  if (essenceOptions.length) {
+    const pC = [];
+    let sn = 1;
+    const add = (text, type, sub = '') => pC.push({ num: sn++, text, type, subtext: sub });
+    const ess = essenceOptions[0];
+    const g = ess.guaranteedByItemType[baseType];
+    const gMod = getMod(g.modId);
+    const remainDesired = desired.filter(m => m.id !== gMod?.id);
+    const remainProb = remainDesired.length ? estimateCombinedProb(remainDesired) : '100';
+    const remainAvg = estimateAvgAttempts(remainProb);
+
+    if (STATE.rarity !== 'normal') add('Use <strong>Orb of Scouring</strong> para limpar o item (Normal).', 'step-medium');
+    add(`Use <strong>${ess.name}</strong> — garante "${gMod?.displayName}" no item.`, 'step-high',
+      `Essências sempre produzem item Raro com o afixo garantido + 3-5 mods aleatórios.`);
+    if (remainDesired.length === 0) {
+      add('Todos os afixos desejados garantidos pela essência. Repita se os mods extras incomodarem.', 'step-info');
+    } else {
+      add(`Repita a essência até que os mods extras também incluam: ${remainDesired.map(m => `"${m.displayName}"`).join(', ')}`, 'step-medium',
+        `Chance dos extras desejados aparacer: ~${remainProb}% | Média: ~${remainAvg} Essências`);
+      add('Quando o item tiver o(s) afixo(s) garantido(s) + pelo menos 1 extra desejado, use <strong>Exalted Orb</strong> para completar.', 'step-info');
+    }
+    add('Use <strong>Divine Orb</strong> para otimizar os valores numéricos dos afixos.', 'step-info');
+    paths.push({
+      id: 'essence', name: `Via ${ess.name}`, badge: 'Garantido', badgeColor: '#5da85d',
+      costLabel: `~${remainAvg} Essências`, available: true, steps: pC
+    });
+  }
+
+  // ── CAMINHO D: Via Soul Core (Ritual) ─────────────────────────────────────
+  if (soulCoreOptions.length) {
+    const pD = [];
+    let sn = 1;
+    const add = (text, type, sub = '') => pD.push({ num: sn++, text, type, subtext: sub });
+    const sc = soulCoreOptions[0];
+    const g = sc.guaranteedByItemType[baseType];
+    const gMod = getMod(g.modId);
+    const tierLabel = g.tier === 1 ? 'T1' : `T${g.tier}`;
+
+    if (STATE.rarity !== 'normal') add('Use <strong>Orb of Scouring</strong> para limpar o item (Normal).', 'step-medium');
+    add(`[Ritual] Use <strong>${sc.name}</strong> — garante "${gMod?.displayName}" (${tierLabel}) no item.`, 'step-high',
+      `Soul Cores funcionam como Essências. Obtidos em encontros de Ritual.`);
+    add(`Repita o Soul Core até acertar os mods extras desejados junto com o garantido.`, 'step-medium',
+      `Após acertar, use Exalted Orb para preencher slots vazios restantes.`);
+    add('Use <strong>Omen of Refreshment</strong> (Ritual) ou <strong>Divine Orb</strong> para otimizar os valores.', 'step-info');
+    paths.push({
+      id: 'soul_core', name: `Soul Core (Ritual)`, badge: 'Ritual', badgeColor: '#d060b0',
+      costLabel: 'Soul Core + Exalteds', available: true, steps: pD
+    });
+  }
+
+  // ── CAMINHO E: Ritual — Whittling + Regal ────────────────────────────────
+  if (desired.length <= 2 && desiredPre.length <= 1 && desiredSuf.length <= 1) {
+    const pE = [];
+    let sn = 1;
+    const add = (text, type, sub = '') => pE.push({ num: sn++, text, type, subtext: sub });
+    if (STATE.rarity !== 'normal') add('Use <strong>Orb of Scouring</strong> para limpar o item.', 'step-medium');
+    add('Transmute → Alteration até conseguir pelo menos 1 afixo desejado.', 'step-medium',
+      `Chance de acertar o primeiro desejado: ~${estimateSingleProb(desired[0])}%`);
+    add(`[Ritual] Use <strong>Omen of Whittling</strong> para remover o afixo indesejado do item Mágico.`, 'step-high',
+      'Whittling remove 1 mod aleatório de itens Mágicos — ideal para limpar o "segundo mod ruim".');
+    if (desired.length === 2)
+      add('Use <strong>Orb of Augmentation</strong> para adicionar o segundo afixo desejado (se slot livre).', 'step-info');
+    add('Use <strong>Regal Orb</strong> para evoluir para Raro.', 'step-medium');
+    add('Complete os slots com <strong>Exalted Orb</strong>.', 'step-info');
+    paths.push({
+      id: 'whittling', name: 'Alt + Whittling (Ritual)', badge: 'Ritual', badgeColor: '#d060b0',
+      costLabel: 'Alt + Omen + Regal', available: true, steps: pE
+    });
+  }
+
+  // ── CAMINHO F: Omen of Amelioration — para quem tem tier baixo ────────────
+  {
+    const lowTierMods = matchedDesired.filter(m => {
+      const slot = (m.type === 'prefix' ? STATE.prefixes : STATE.suffixes).find(s => s?.id === m.id);
+      if (!slot) return false;
+      return slot.tier > 1;
+    });
+    if (lowTierMods.length) {
+      const pF = [];
+      let sn = 1;
+      const add = (text, type, sub = '') => pF.push({ num: sn++, text, type, subtext: sub });
+      add(`O item já tem ${lowTierMods.map(m => `"${m.displayName}"`).join(', ')} mas em tier baixo.`, 'step-info');
+      add(`[Ritual] Use <strong>Omen of Amelioration</strong> para melhorar 1 afixo aleatório ao próximo tier.`, 'step-high',
+        `Pode acertar um dos afixos desejados com tier baixo. Há ${lowTierMods.length} candidato(s).`);
+      add('Repita Amelioration até todos os afixos desejados estarem em T1 ou T2.', 'step-medium');
+      add('Use <strong>Divine Orb</strong> para maximizar os valores dentro do tier.', 'step-info');
+      paths.push({
+        id: 'amelioration', name: 'Amelioration (Ritual)', badge: 'Tier Up', badgeColor: '#90d040',
+        costLabel: 'Omens + Divine', available: true, steps: pF
+      });
+    }
+  }
+
+  // ── CAMINHO G: Catalyst / Qualidade (Delirium ou Breach) — apenas acessórios
+  {
+    const item = getItem(STATE.itemType);
+    if (item?.category === 'jewellery') {
+      const qualityDesiredType = (() => {
+        if (desired.some(m => ['jewellery_fire_damage', 'weapon_fire_damage'].includes(m.id))) return 'fire';
+        if (desired.some(m => ['jewellery_cold_damage', 'weapon_cold_damage'].includes(m.id))) return 'cold';
+        if (desired.some(m => ['jewellery_lightning_damage', 'weapon_lightning_damage'].includes(m.id))) return 'lightning';
+        if (desired.some(m => ['jewellery_phys_damage', 'weapon_phys_damage', 'jewellery_life', 'armour_life'].includes(m.id))) return 'physical';
+        if (desired.some(m => m.group?.includes('Damage'))) return 'attack';
+        if (desired.some(m => m.group?.includes('Res'))) return 'resistance';
+        return null;
+      })();
+
+      if (qualityDesiredType) {
+        const catNames = { fire: "Xoph's Catalyst (Breach)", cold: "Tul's Catalyst (Breach)",
+          lightning: "Esh's Catalyst (Breach)", physical: "Uul-Netol's Catalyst (Breach)",
+          attack: 'Distilled Guilt (Delirium)', resistance: 'Distilled Despair (Delirium)',
+          elemental: 'Distilled Fear (Delirium)' };
+        const catName = catNames[qualityDesiredType] || 'Catalyst/Distilled compatível';
+        const pG = [];
+        let sn = 1;
+        const add = (text, type, sub = '') => pG.push({ num: sn++, text, type, subtext: sub });
+        add(`Aplique 20% de Qualidade com <strong>${catName}</strong> no acessório.`, 'step-high',
+          'Qualidade aumenta o peso dos mods compatíveis, aumentando a chance de rolar os desejados.');
+        add('Com qualidade aplicada, use <strong>Orb of Alteration</strong> ou <strong>Chaos Orb</strong> normalmente.', 'step-medium',
+          `A qualidade eleva a probabilidade em ~20-30% para mods do tipo ${qualityDesiredType}.`);
+        add('Repita até conseguir os afixos desejados — a qualidade persiste entre rolagens.', 'step-info');
+        add('Use <strong>Divine Orb</strong> para otimizar os valores.', 'step-info');
+        paths.push({
+          id: 'quality_craft', name: `Qualidade + Craft (${qualityDesiredType === 'fire' ? 'Breach' : 'Delirium'})`,
+          badge: 'Mecânica', badgeColor: qualityDesiredType === 'fire' ? '#d04020' : '#9050c0',
+          costLabel: 'Catalyst/Distilled + Alt/Chaos', available: true, steps: pG
+        });
+      }
+    }
+  }
+
+  // ── CAMINHO H: Annul + Exalted (item raro com alguns desejados) ─────────────
+  if (STATE.rarity === 'rare' && matchedDesired.length > 0 && matchedDesired.length < desired.length) {
+    const missing = desired.filter(m => !matchedDesired.includes(m));
+    const openPre = 3 - currentPre.length;
+    const openSuf = 3 - currentSuf.length;
+    const annulProb = estimateAnnulProb(desired);
+    const pH = [];
+    let sn = 1;
+    const add = (text, type, sub = '') => pH.push({ num: sn++, text, type, subtext: sub });
+
+    add(`Item já possui ${matchedDesired.length}/${desired.length} afixo(s) desejado(s)!`, 'step-high',
+      `Falta: ${missing.map(m => `"${m.displayName}"`).join(', ')}`);
+    if (openPre > 0 || openSuf > 0) {
+      add(`Use <strong>Exalted Orb</strong> para adicionar afixo em slot vazio.`, 'step-high',
+        `Há ${openPre + openSuf} slot(s) livre(s). Chance de acertar o desejado: ~${estimateSingleProb(missing[0])}%`);
+      if (missing.length > openPre + openSuf)
+        add('Se o Exalted não acertar o desejado, use <strong>Annulment</strong> no indesejado e tente novamente.', 'step-danger',
+          `Chance de remover um mod INDESEJADO (seguro): ~${annulProb}%`);
+    } else {
+      add(`Use <strong>Orb of Annulment</strong> para remover 1 afixo indesejado e abrir slot.`, 'step-danger',
+        `⚠ RISCO: Chance de remover mod indesejado (desejado): ~${annulProb}% | Slots cheios!`);
+      add('Após abrir slot, use <strong>Exalted Orb</strong> para adicionar o afixo em falta.', 'step-info');
+    }
+    add('Use <strong>Divine Orb</strong> para maximizar os valores.', 'step-info');
+    paths.push({
+      id: 'annul_exalt', name: 'Annul + Exalt (Completar)', badge: 'Arriscado', badgeColor: '#c85050',
+      costLabel: 'Annulment + Exalted', available: true, steps: pH
+    });
+  }
+
+  if (!paths.length) {
+    return [{
+      id: 'generic', name: 'Rota Genérica', badge: 'Padrão', badgeColor: '#888',
+      costLabel: 'Variável', available: true,
+      steps: [{ num: 1, text: 'Selecione um tipo de item e afixos desejados para ver rotas detalhadas.', type: 'step-info', subtext: '' }]
+    }];
+  }
+  return paths;
 }
 
 // ============================================================
@@ -753,14 +997,28 @@ function renderItemCard() {
   typeEl.textContent = rarityLabel(STATE.rarity);
   sep.style.display = 'block';
 
+  // Mostrar implicit do item base
   modsEl.innerHTML = '';
+  if (item.implicit) {
+    const implDiv = document.createElement('div');
+    implDiv.className = 'item-card-implicit';
+    implDiv.textContent = item.implicit;
+    modsEl.appendChild(implDiv);
+    const implSep = document.createElement('div');
+    implSep.className = 'item-card-implicit-sep';
+    modsEl.appendChild(implSep);
+  }
+
   const allSlots = [
     ...STATE.prefixes.map(s => s ? { slot: s, type: 'prefix' } : null),
     ...STATE.suffixes.map(s => s ? { slot: s, type: 'suffix' } : null),
   ].filter(Boolean);
 
   if (!allSlots.length) {
-    modsEl.innerHTML = '<span style="font-size:0.75rem;color:var(--text-muted);font-style:italic">Sem afixos</span>';
+    const noMods = document.createElement('span');
+    noMods.style.cssText = 'font-size:0.75rem;color:var(--text-muted);font-style:italic';
+    noMods.textContent = 'Sem afixos';
+    modsEl.appendChild(noMods);
     return;
   }
 
@@ -883,20 +1141,16 @@ function renderCraftPanel() {
 
 function renderCurrencyGrid() {
   const grid = document.getElementById('currency-grid');
-  if (grid.children.length === DATA.currency.length) {
-    // Just update disabled states
-    DATA.currency.forEach(c => {
-      const btn = grid.querySelector(`[data-currency-id="${c.id}"]`);
-      if (!btn) return;
-      const disabled = !c.allowedRarities.includes(STATE.rarity);
-      btn.classList.toggle('disabled-currency', disabled);
-      btn.classList.toggle('selected', STATE.selectedCurrency === c.id);
-    });
-    return;
-  }
+  const activeCat = STATE.currencyCategory;
+  const filtered = DATA.currency.filter(c => (c.category || 'standard') === activeCat);
+
+  // Update category tab active state
+  document.querySelectorAll('.cat-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === activeCat);
+  });
 
   grid.innerHTML = '';
-  DATA.currency.forEach(c => {
+  filtered.forEach(c => {
     const btn = document.createElement('button');
     btn.className = 'currency-btn';
     btn.dataset.currencyId = c.id;
@@ -954,8 +1208,9 @@ function renderEssenceSelect() {
 
   // Rebuild options only when needed
   sel.innerHTML = '<option value="">— Nenhuma Essência —</option>';
+  const baseType = getBaseType();
   DATA.essences.forEach(e => {
-    const available = STATE.itemType && e.guaranteedByItemType[STATE.itemType];
+    const available = STATE.itemType && e.guaranteedByItemType[baseType];
     if (!STATE.itemType || available) {
       const opt = document.createElement('option');
       opt.value = e.id;
@@ -972,7 +1227,7 @@ function renderEssenceSelect() {
     return;
   }
 
-  const g = ess.guaranteedByItemType[STATE.itemType];
+  const g = ess.guaranteedByItemType[baseType];
   if (g) {
     const mod = getMod(g.modId);
     info.textContent = `Garante: ${mod?.displayName || g.modId} (T${g.tier})`;
@@ -980,7 +1235,7 @@ function renderEssenceSelect() {
     info.textContent = `Não disponível para ${getItem(STATE.itemType)?.name}`;
   }
 
-  btn.disabled = !(STATE.rarity === 'normal' && STATE.itemType && ess && ess.guaranteedByItemType[STATE.itemType]);
+  btn.disabled = !(STATE.rarity === 'normal' && STATE.itemType && ess && ess.guaranteedByItemType[baseType]);
 }
 
 function renderHistory() {
@@ -1018,7 +1273,7 @@ function renderHistory() {
 // ============================================================
 function renderResultsPanel() {
   renderDesiredMods();
-  renderCraftPath();
+  renderCraftPaths();
   renderProbabilityList();
   renderSavedBuilds();
 }
@@ -1076,27 +1331,68 @@ function renderDesiredMods() {
   if (showAdd) addRow.style.display = STATE.itemType ? 'block' : 'none';
 }
 
-function renderCraftPath() {
-  const content = document.getElementById('craft-path-content');
-  const steps = generateCraftPath();
+function renderCraftPaths() {
+  const content = document.getElementById('craft-paths-content');
+  const paths = generateAllCraftPaths();
 
-  if (!steps) {
-    content.innerHTML = '<p class="hint-text">Selecione afixos desejados para ver sugestões</p>';
+  if (!paths) {
+    content.innerHTML = '<p class="hint-text">Selecione afixos desejados para ver as rotas</p>';
     return;
   }
 
   content.innerHTML = '';
-  steps.forEach(s => {
-    const div = document.createElement('div');
-    div.className = `craft-step ${s.type}`;
-    div.innerHTML = `
-      <div class="craft-step-num">${s.num}</div>
-      <div>
-        <div class="craft-step-text">${s.text}</div>
-        ${s.subtext ? `<div class="craft-step-prob">${s.subtext}</div>` : ''}
+  paths.forEach((path, idx) => {
+    const card = document.createElement('div');
+    card.className = `craft-path-card${idx === 0 ? ' expanded' : ''}`;
+
+    const header = document.createElement('div');
+    header.className = 'craft-path-header';
+    header.innerHTML = `
+      <div class="craft-path-title">
+        <span class="craft-path-badge" style="background:${path.badgeColor}">${path.badge}</span>
+        <strong>${path.name}</strong>
+      </div>
+      <div class="craft-path-meta">
+        <span class="craft-path-cost">${path.costLabel}</span>
+        <span class="craft-path-toggle">${idx === 0 ? '▲' : '▼'}</span>
       </div>
     `;
-    content.appendChild(div);
+
+    const body = document.createElement('div');
+    body.className = 'craft-path-body';
+    if (idx !== 0) body.style.display = 'none';
+
+    path.steps.forEach(s => {
+      const div = document.createElement('div');
+      div.className = `craft-step ${s.type}`;
+      div.innerHTML = `
+        <div class="craft-step-num">${s.num}</div>
+        <div>
+          <div class="craft-step-text">${s.text}</div>
+          ${s.subtext ? `<div class="craft-step-prob">${s.subtext}</div>` : ''}
+        </div>
+      `;
+      body.appendChild(div);
+    });
+
+    header.addEventListener('click', () => {
+      const expanded = card.classList.contains('expanded');
+      // Fechar todos
+      content.querySelectorAll('.craft-path-card').forEach(c => {
+        c.classList.remove('expanded');
+        c.querySelector('.craft-path-body').style.display = 'none';
+        c.querySelector('.craft-path-toggle').textContent = '▼';
+      });
+      if (!expanded) {
+        card.classList.add('expanded');
+        body.style.display = 'block';
+        header.querySelector('.craft-path-toggle').textContent = '▲';
+      }
+    });
+
+    card.appendChild(header);
+    card.appendChild(body);
+    content.appendChild(card);
   });
 }
 
@@ -1196,17 +1492,41 @@ async function loadAllData() {
 
 function populateItemTypeSelect() {
   const sel = document.getElementById('select-item-type');
-  const groups = { jewellery: 'Joias', armour: 'Armaduras', weapon: 'Armas' };
+
+  const baseTypeLabels = {
+    ring:            'Anéis',
+    amulet:          'Amuletos',
+    belt:            'Cintos',
+    helmet:          'Capacetes',
+    gloves:          'Luvas',
+    boots:           'Botas',
+    body_armour:     'Peitorais',
+    shield:          'Escudos',
+    bow:             'Arcos',
+    one_hand_weapon: 'Armas de Uma Mão',
+    two_hand_weapon: 'Armas de Duas Mãos',
+    wand:            'Varinhas',
+    staff:           'Cajados',
+  };
+  const baseTypeOrder = [
+    'ring', 'amulet', 'belt',
+    'helmet', 'gloves', 'boots', 'body_armour', 'shield',
+    'bow', 'one_hand_weapon', 'two_hand_weapon', 'wand', 'staff',
+  ];
+
+  // Agrupar itens por baseType
   const grouped = {};
   DATA.items.forEach(item => {
-    if (!grouped[item.category]) grouped[item.category] = [];
-    grouped[item.category].push(item);
+    const key = item.baseType || item.id;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(item);
   });
-  Object.entries(groups).forEach(([cat, label]) => {
-    if (!grouped[cat]) return;
+
+  baseTypeOrder.forEach(bt => {
+    if (!grouped[bt]) return;
     const optGroup = document.createElement('optgroup');
-    optGroup.label = label;
-    grouped[cat].forEach(item => {
+    optGroup.label = baseTypeLabels[bt] || bt;
+    grouped[bt].forEach(item => {
       const opt = document.createElement('option');
       opt.value = item.id;
       opt.textContent = item.name;
@@ -1299,6 +1619,15 @@ function initEventListeners() {
       e.target.value = '';
       renderResultsPanel();
     }
+  });
+
+  // Currency category tabs
+  document.querySelectorAll('.cat-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      STATE.currencyCategory = btn.dataset.cat;
+      STATE.selectedCurrency = null;
+      renderCraftPanel();
+    });
   });
 
   // Probability tabs

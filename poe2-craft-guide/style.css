@@ -139,6 +139,7 @@ body {
 .panel .history-section,
 .panel .desired-section,
 .panel .craft-path-section,
+.panel .craft-paths-section,
 .panel .probability-section,
 .panel .save-section,
 .panel .currency-info-box,
@@ -226,6 +227,18 @@ select option { background: #1a1408; color: var(--text-primary); }
 .item-card-mod-entry.is-prefix { color: var(--prefix-color); }
 .item-card-mod-entry.is-suffix { color: var(--suffix-color); }
 .item-card-mod-entry.is-desired { font-weight: 600; text-shadow: 0 0 6px currentColor; }
+/* Item implicit */
+.item-card-implicit {
+  font-size: 0.75rem;
+  color: #9a9aff;
+  font-style: italic;
+  text-align: center;
+  padding: 2px 0;
+}
+.item-card-implicit-sep {
+  border-top: 1px solid rgba(200,151,58,0.3);
+  margin: 4px 0;
+}
 .mod-tier-tag {
   font-size: 0.65rem;
   opacity: 0.6;
@@ -504,6 +517,78 @@ select option { background: #1a1408; color: var(--text-primary); }
 /* ============================================================ CRAFT PATH */
 .craft-path-section { padding: 10px 14px; }
 .craft-path-section > .section-label { margin-bottom: 6px; display: block; }
+
+/* ============================================================ CRAFT PATHS MULTI ============================================================ */
+.craft-paths-section { padding: 10px 14px; }
+.craft-paths-section > .section-label { margin-bottom: 8px; display: block; }
+
+.craft-path-card {
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 6px;
+  transition: border-color var(--transition);
+}
+.craft-path-card.expanded { border-color: var(--border-bright); }
+
+.craft-path-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--bg-slot-empty);
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+  transition: background var(--transition);
+}
+.craft-path-header:hover { background: var(--bg-btn-hover); }
+.craft-path-title { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; }
+.craft-path-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+  color: #000;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+.craft-path-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.craft-path-cost { font-size: 0.7rem; color: var(--text-secondary); }
+.craft-path-toggle { font-size: 0.7rem; color: var(--text-muted); }
+.craft-path-body { padding: 8px 10px; background: var(--bg-panel); }
+
+/* Currency category tabs */
+.currency-category-tabs {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.cat-tab {
+  padding: 3px 9px;
+  border: 1px solid var(--border-medium);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.cat-tab:hover { border-color: var(--border-bright); color: var(--text-primary); }
+.cat-tab.active { background: rgba(200,151,58,0.18); border-color: var(--border-bright); color: var(--border-bright); font-weight: 600; }
+.cat-tab[data-cat="ritual"]  { border-color: #8030a0; color: #d060b0; }
+.cat-tab[data-cat="ritual"].active  { background: rgba(208,96,176,0.15); border-color: #d060b0; }
+.cat-tab[data-cat="delirium"] { border-color: #503080; color: #9060c0; }
+.cat-tab[data-cat="delirium"].active { background: rgba(144,96,192,0.15); border-color: #9060c0; }
+.cat-tab[data-cat="breach"]  { border-color: #301880; color: #6040d0; }
+.cat-tab[data-cat="breach"].active  { background: rgba(96,64,208,0.15); border-color: #6040d0; }
+.cat-tab[data-cat="abyss"]   { border-color: #103060; color: #3070b0; }
+.cat-tab[data-cat="abyss"].active   { background: rgba(48,112,176,0.15); border-color: #3070b0; }
+
 .craft-step {
   display: flex;
   align-items: flex-start;
