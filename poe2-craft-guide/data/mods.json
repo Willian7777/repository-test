@@ -1,0 +1,564 @@
+[
+  {
+    "id": "jewellery_life",
+    "displayName": "+# de Vida Máxima",
+    "type": "prefix",
+    "group": "MaximumLife",
+    "itemTypes": ["ring", "amulet", "belt"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 90,  "maxVal": 109, "minIlvl": 75, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 70,  "maxVal": 89,  "minIlvl": 55, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 50,  "maxVal": 69,  "minIlvl": 40, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 35,  "maxVal": 49,  "minIlvl": 28, "weight": 1250 },
+      { "tier": 5, "label": "T5", "minVal": 20,  "maxVal": 34,  "minIlvl": 15, "weight": 1500 },
+      { "tier": 6, "label": "T6", "minVal": 10,  "maxVal": 19,  "minIlvl": 1,  "weight": 2000 }
+    ]
+  },
+  {
+    "id": "jewellery_mana",
+    "displayName": "+# de Mana Máxima",
+    "type": "prefix",
+    "group": "MaximumMana",
+    "itemTypes": ["ring", "amulet"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 80,  "maxVal": 100, "minIlvl": 75, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 60,  "maxVal": 79,  "minIlvl": 55, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 40,  "maxVal": 59,  "minIlvl": 35, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 25,  "maxVal": 39,  "minIlvl": 20, "weight": 1500 },
+      { "tier": 5, "label": "T5", "minVal": 15,  "maxVal": 24,  "minIlvl": 1,  "weight": 2000 }
+    ]
+  },
+  {
+    "id": "jewellery_phys_damage",
+    "displayName": "Adiciona # a # de Dano Físico a Ataques",
+    "type": "prefix",
+    "group": "PhysicalDamage",
+    "itemTypes": ["ring", "amulet", "belt"],
+    "hasTwoValues": true,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 10, "maxVal": 14, "minVal2": 22, "maxVal2": 28, "minIlvl": 75, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 7,  "maxVal": 9,  "minVal2": 14, "maxVal2": 18, "minIlvl": 50, "weight": 700  },
+      { "tier": 3, "label": "T3", "minVal": 4,  "maxVal": 6,  "minVal2": 9,  "maxVal2": 12, "minIlvl": 25, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 1,  "maxVal": 3,  "minVal2": 4,  "maxVal2": 6,  "minIlvl": 1,  "weight": 1500 }
+    ]
+  },
+  {
+    "id": "jewellery_fire_damage",
+    "displayName": "Adiciona # a # de Dano de Fogo a Ataques",
+    "type": "prefix",
+    "group": "FireDamage",
+    "itemTypes": ["ring", "amulet"],
+    "hasTwoValues": true,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 15, "maxVal": 20, "minVal2": 28, "maxVal2": 36, "minIlvl": 75, "weight": 450  },
+      { "tier": 2, "label": "T2", "minVal": 10, "maxVal": 14, "minVal2": 18, "maxVal2": 24, "minIlvl": 50, "weight": 700  },
+      { "tier": 3, "label": "T3", "minVal": 6,  "maxVal": 9,  "minVal2": 11, "maxVal2": 16, "minIlvl": 25, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 2,  "maxVal": 5,  "minVal2": 5,  "maxVal2": 8,  "minIlvl": 1,  "weight": 1500 }
+    ]
+  },
+  {
+    "id": "jewellery_cold_damage",
+    "displayName": "Adiciona # a # de Dano de Frio a Ataques",
+    "type": "prefix",
+    "group": "ColdDamage",
+    "itemTypes": ["ring", "amulet"],
+    "hasTwoValues": true,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 12, "maxVal": 16, "minVal2": 24, "maxVal2": 30, "minIlvl": 75, "weight": 450  },
+      { "tier": 2, "label": "T2", "minVal": 8,  "maxVal": 11, "minVal2": 15, "maxVal2": 20, "minIlvl": 50, "weight": 700  },
+      { "tier": 3, "label": "T3", "minVal": 5,  "maxVal": 7,  "minVal2": 9,  "maxVal2": 13, "minIlvl": 25, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 2,  "maxVal": 4,  "minVal2": 4,  "maxVal2": 7,  "minIlvl": 1,  "weight": 1500 }
+    ]
+  },
+  {
+    "id": "jewellery_lightning_damage",
+    "displayName": "Adiciona # a # de Dano de Raio a Ataques",
+    "type": "prefix",
+    "group": "LightningDamage",
+    "itemTypes": ["ring", "amulet"],
+    "hasTwoValues": true,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 1, "maxVal": 7,  "minVal2": 35, "maxVal2": 45, "minIlvl": 75, "weight": 450  },
+      { "tier": 2, "label": "T2", "minVal": 1, "maxVal": 5,  "minVal2": 22, "maxVal2": 28, "minIlvl": 50, "weight": 700  },
+      { "tier": 3, "label": "T3", "minVal": 1, "maxVal": 3,  "minVal2": 14, "maxVal2": 18, "minIlvl": 25, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 1, "maxVal": 2,  "minVal2": 6,  "maxVal2": 9,  "minIlvl": 1,  "weight": 1500 }
+    ]
+  },
+  {
+    "id": "jewellery_spell_damage",
+    "displayName": "#% mais Dano com Feitiços",
+    "type": "prefix",
+    "group": "SpellDamage",
+    "itemTypes": ["ring", "amulet"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 20, "maxVal": 24, "minIlvl": 72, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 15, "maxVal": 19, "minIlvl": 55, "weight": 650  },
+      { "tier": 3, "label": "T3", "minVal": 10, "maxVal": 14, "minIlvl": 35, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 5,  "maxVal": 9,  "minIlvl": 1,  "weight": 1300 }
+    ]
+  },
+  {
+    "id": "belt_flask_charges",
+    "displayName": "#% de Cargas de Frasco Geradas",
+    "type": "prefix",
+    "group": "FlaskCharges",
+    "itemTypes": ["belt"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 25, "maxVal": 30, "minIlvl": 65, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 18, "maxVal": 24, "minIlvl": 40, "weight": 700  },
+      { "tier": 3, "label": "T3", "minVal": 10, "maxVal": 17, "minIlvl": 1,  "weight": 1000 }
+    ]
+  },
+  {
+    "id": "amulet_crit_chance",
+    "displayName": "#% mais Chance de Acerto Crítico",
+    "type": "prefix",
+    "group": "CriticalStrikeChance",
+    "itemTypes": ["amulet"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 40, "maxVal": 50, "minIlvl": 68, "weight": 350  },
+      { "tier": 2, "label": "T2", "minVal": 28, "maxVal": 39, "minIlvl": 45, "weight": 600  },
+      { "tier": 3, "label": "T3", "minVal": 15, "maxVal": 27, "minIlvl": 20, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 5,  "maxVal": 14, "minIlvl": 1,  "weight": 1300 }
+    ]
+  },
+  {
+    "id": "armour_life",
+    "displayName": "+# de Vida Máxima",
+    "type": "prefix",
+    "group": "MaximumLife",
+    "itemTypes": ["helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 150, "maxVal": 179, "minIlvl": 75, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 120, "maxVal": 149, "minIlvl": 55, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 90,  "maxVal": 119, "minIlvl": 40, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 60,  "maxVal": 89,  "minIlvl": 28, "weight": 1250 },
+      { "tier": 5, "label": "T5", "minVal": 40,  "maxVal": 59,  "minIlvl": 15, "weight": 1500 },
+      { "tier": 6, "label": "T6", "minVal": 20,  "maxVal": 39,  "minIlvl": 1,  "weight": 2000 }
+    ]
+  },
+  {
+    "id": "armour_mana",
+    "displayName": "+# de Mana Máxima",
+    "type": "prefix",
+    "group": "MaximumMana",
+    "itemTypes": ["helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 100, "maxVal": 120, "minIlvl": 75, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 75,  "maxVal": 99,  "minIlvl": 55, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 50,  "maxVal": 74,  "minIlvl": 35, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 30,  "maxVal": 49,  "minIlvl": 20, "weight": 1500 },
+      { "tier": 5, "label": "T5", "minVal": 15,  "maxVal": 29,  "minIlvl": 1,  "weight": 2000 }
+    ]
+  },
+  {
+    "id": "armour_es",
+    "displayName": "+# de Escudo de Energia Máximo",
+    "type": "prefix",
+    "group": "MaximumEnergyShield",
+    "itemTypes": ["helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 80,  "maxVal": 100, "minIlvl": 75, "weight": 550  },
+      { "tier": 2, "label": "T2", "minVal": 60,  "maxVal": 79,  "minIlvl": 55, "weight": 800  },
+      { "tier": 3, "label": "T3", "minVal": 40,  "maxVal": 59,  "minIlvl": 40, "weight": 1100 },
+      { "tier": 4, "label": "T4", "minVal": 25,  "maxVal": 39,  "minIlvl": 25, "weight": 1400 },
+      { "tier": 5, "label": "T5", "minVal": 10,  "maxVal": 24,  "minIlvl": 1,  "weight": 1900 }
+    ]
+  },
+  {
+    "id": "armour_armour_flat",
+    "displayName": "+# de Armadura",
+    "type": "prefix",
+    "group": "Armour",
+    "itemTypes": ["helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 500, "maxVal": 620, "minIlvl": 75, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 350, "maxVal": 499, "minIlvl": 55, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 200, "maxVal": 349, "minIlvl": 35, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 100, "maxVal": 199, "minIlvl": 20, "weight": 1500 },
+      { "tier": 5, "label": "T5", "minVal": 40,  "maxVal": 99,  "minIlvl": 1,  "weight": 2000 }
+    ]
+  },
+  {
+    "id": "armour_evasion_flat",
+    "displayName": "+# de Evasão",
+    "type": "prefix",
+    "group": "Evasion",
+    "itemTypes": ["helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 500, "maxVal": 620, "minIlvl": 75, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 350, "maxVal": 499, "minIlvl": 55, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 200, "maxVal": 349, "minIlvl": 35, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 100, "maxVal": 199, "minIlvl": 20, "weight": 1500 },
+      { "tier": 5, "label": "T5", "minVal": 40,  "maxVal": 99,  "minIlvl": 1,  "weight": 2000 }
+    ]
+  },
+  {
+    "id": "weapon_phys_damage",
+    "displayName": "Adiciona # a # de Dano Físico",
+    "type": "prefix",
+    "group": "PhysicalDamageFlat",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow"],
+    "hasTwoValues": true,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 45, "maxVal": 55,  "minVal2": 85,  "maxVal2": 105, "minIlvl": 75, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 30, "maxVal": 44,  "minVal2": 60,  "maxVal2": 84,  "minIlvl": 55, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 18, "maxVal": 29,  "minVal2": 36,  "maxVal2": 59,  "minIlvl": 35, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 8,  "maxVal": 17,  "minVal2": 18,  "maxVal2": 35,  "minIlvl": 15, "weight": 1300 },
+      { "tier": 5, "label": "T5", "minVal": 2,  "maxVal": 7,   "minVal2": 5,   "maxVal2": 17,  "minIlvl": 1,  "weight": 1700 }
+    ]
+  },
+  {
+    "id": "weapon_phys_pct",
+    "displayName": "#% mais Dano Físico",
+    "type": "prefix",
+    "group": "IncreasedPhysicalDamage",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 155, "maxVal": 175, "minIlvl": 80, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 120, "maxVal": 154, "minIlvl": 60, "weight": 650  },
+      { "tier": 3, "label": "T3", "minVal": 85,  "maxVal": 119, "minIlvl": 40, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 55,  "maxVal": 84,  "minIlvl": 20, "weight": 1200 },
+      { "tier": 5, "label": "T5", "minVal": 25,  "maxVal": 54,  "minIlvl": 1,  "weight": 1600 }
+    ]
+  },
+  {
+    "id": "weapon_fire_damage",
+    "displayName": "Adiciona # a # de Dano de Fogo",
+    "type": "prefix",
+    "group": "FireDamage",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow", "wand", "staff"],
+    "hasTwoValues": true,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 40, "maxVal": 55,  "minVal2": 80,  "maxVal2": 110, "minIlvl": 75, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 25, "maxVal": 39,  "minVal2": 55,  "maxVal2": 79,  "minIlvl": 55, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 14, "maxVal": 24,  "minVal2": 32,  "maxVal2": 54,  "minIlvl": 35, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 6,  "maxVal": 13,  "minVal2": 15,  "maxVal2": 31,  "minIlvl": 15, "weight": 1300 },
+      { "tier": 5, "label": "T5", "minVal": 1,  "maxVal": 5,   "minVal2": 4,   "maxVal2": 14,  "minIlvl": 1,  "weight": 1700 }
+    ]
+  },
+  {
+    "id": "weapon_cold_damage",
+    "displayName": "Adiciona # a # de Dano de Frio",
+    "type": "prefix",
+    "group": "ColdDamage",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow", "wand", "staff"],
+    "hasTwoValues": true,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 32, "maxVal": 45,  "minVal2": 65,  "maxVal2": 90,  "minIlvl": 75, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 20, "maxVal": 31,  "minVal2": 44,  "maxVal2": 64,  "minIlvl": 55, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 11, "maxVal": 19,  "minVal2": 25,  "maxVal2": 43,  "minIlvl": 35, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 5,  "maxVal": 10,  "minVal2": 12,  "maxVal2": 24,  "minIlvl": 15, "weight": 1300 },
+      { "tier": 5, "label": "T5", "minVal": 1,  "maxVal": 4,   "minVal2": 3,   "maxVal2": 11,  "minIlvl": 1,  "weight": 1700 }
+    ]
+  },
+  {
+    "id": "weapon_lightning_damage",
+    "displayName": "Adiciona # a # de Dano de Raio",
+    "type": "prefix",
+    "group": "LightningDamage",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow", "wand", "staff"],
+    "hasTwoValues": true,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 4,  "maxVal": 12,  "minVal2": 100, "maxVal2": 130, "minIlvl": 75, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 3,  "maxVal": 8,   "minVal2": 65,  "maxVal2": 99,  "minIlvl": 55, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 2,  "maxVal": 5,   "minVal2": 38,  "maxVal2": 64,  "minIlvl": 35, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 1,  "maxVal": 3,   "minVal2": 18,  "maxVal2": 37,  "minIlvl": 15, "weight": 1300 },
+      { "tier": 5, "label": "T5", "minVal": 1,  "maxVal": 2,   "minVal2": 5,   "maxVal2": 17,  "minIlvl": 1,  "weight": 1700 }
+    ]
+  },
+  {
+    "id": "weapon_crit_chance",
+    "displayName": "#% mais Chance de Acerto Crítico",
+    "type": "prefix",
+    "group": "CriticalStrikeChance",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow", "wand", "staff"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 40, "maxVal": 50, "minIlvl": 68, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 30, "maxVal": 39, "minIlvl": 50, "weight": 650  },
+      { "tier": 3, "label": "T3", "minVal": 20, "maxVal": 29, "minIlvl": 30, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 10, "maxVal": 19, "minIlvl": 1,  "weight": 1300 }
+    ]
+  },
+  {
+    "id": "weapon_spell_damage",
+    "displayName": "#% mais Dano com Feitiços",
+    "type": "prefix",
+    "group": "SpellDamage",
+    "itemTypes": ["wand", "staff"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 60, "maxVal": 75, "minIlvl": 80, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 45, "maxVal": 59, "minIlvl": 60, "weight": 650  },
+      { "tier": 3, "label": "T3", "minVal": 30, "maxVal": 44, "minIlvl": 40, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 18, "maxVal": 29, "minIlvl": 20, "weight": 1200 },
+      { "tier": 5, "label": "T5", "minVal": 8,  "maxVal": 17, "minIlvl": 1,  "weight": 1600 }
+    ]
+  },
+  {
+    "id": "fire_res",
+    "displayName": "+#% de Resistência a Fogo",
+    "type": "suffix",
+    "group": "FireResistance",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 40, "maxVal": 45, "minIlvl": 68, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 33, "maxVal": 39, "minIlvl": 50, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 25, "maxVal": 32, "minIlvl": 30, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 15, "maxVal": 24, "minIlvl": 15, "weight": 1300 },
+      { "tier": 5, "label": "T5", "minVal": 6,  "maxVal": 14, "minIlvl": 1,  "weight": 1700 }
+    ]
+  },
+  {
+    "id": "cold_res",
+    "displayName": "+#% de Resistência a Frio",
+    "type": "suffix",
+    "group": "ColdResistance",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 40, "maxVal": 45, "minIlvl": 68, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 33, "maxVal": 39, "minIlvl": 50, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 25, "maxVal": 32, "minIlvl": 30, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 15, "maxVal": 24, "minIlvl": 15, "weight": 1300 },
+      { "tier": 5, "label": "T5", "minVal": 6,  "maxVal": 14, "minIlvl": 1,  "weight": 1700 }
+    ]
+  },
+  {
+    "id": "lightning_res",
+    "displayName": "+#% de Resistência a Raio",
+    "type": "suffix",
+    "group": "LightningResistance",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 40, "maxVal": 45, "minIlvl": 68, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 33, "maxVal": 39, "minIlvl": 50, "weight": 750  },
+      { "tier": 3, "label": "T3", "minVal": 25, "maxVal": 32, "minIlvl": 30, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 15, "maxVal": 24, "minIlvl": 15, "weight": 1300 },
+      { "tier": 5, "label": "T5", "minVal": 6,  "maxVal": 14, "minIlvl": 1,  "weight": 1700 }
+    ]
+  },
+  {
+    "id": "chaos_res",
+    "displayName": "+#% de Resistência ao Caos",
+    "type": "suffix",
+    "group": "ChaosResistance",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 20, "maxVal": 25, "minIlvl": 60, "weight": 350  },
+      { "tier": 2, "label": "T2", "minVal": 15, "maxVal": 19, "minIlvl": 45, "weight": 550  },
+      { "tier": 3, "label": "T3", "minVal": 10, "maxVal": 14, "minIlvl": 30, "weight": 750  },
+      { "tier": 4, "label": "T4", "minVal": 5,  "maxVal": 9,  "minIlvl": 1,  "weight": 1000 }
+    ]
+  },
+  {
+    "id": "str_suffix",
+    "displayName": "+# de Força",
+    "type": "suffix",
+    "group": "Strength",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 30, "maxVal": 35, "minIlvl": 65, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 23, "maxVal": 29, "minIlvl": 45, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 16, "maxVal": 22, "minIlvl": 25, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 9,  "maxVal": 15, "minIlvl": 1,  "weight": 1600 }
+    ]
+  },
+  {
+    "id": "dex_suffix",
+    "displayName": "+# de Destreza",
+    "type": "suffix",
+    "group": "Dexterity",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 30, "maxVal": 35, "minIlvl": 65, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 23, "maxVal": 29, "minIlvl": 45, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 16, "maxVal": 22, "minIlvl": 25, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 9,  "maxVal": 15, "minIlvl": 1,  "weight": 1600 }
+    ]
+  },
+  {
+    "id": "int_suffix",
+    "displayName": "+# de Inteligência",
+    "type": "suffix",
+    "group": "Intelligence",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 30, "maxVal": 35, "minIlvl": 65, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 23, "maxVal": 29, "minIlvl": 45, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 16, "maxVal": 22, "minIlvl": 25, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 9,  "maxVal": 15, "minIlvl": 1,  "weight": 1600 }
+    ]
+  },
+  {
+    "id": "all_attr_suffix",
+    "displayName": "+# a todos os Atributos",
+    "type": "suffix",
+    "group": "AllAttributes",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 15, "maxVal": 20, "minIlvl": 65, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 10, "maxVal": 14, "minIlvl": 40, "weight": 700  },
+      { "tier": 3, "label": "T3", "minVal": 5,  "maxVal": 9,  "minIlvl": 1,  "weight": 1100 }
+    ]
+  },
+  {
+    "id": "accuracy_suffix",
+    "displayName": "+# de Precisão",
+    "type": "suffix",
+    "group": "Accuracy",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 200, "maxVal": 250, "minIlvl": 65, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 150, "maxVal": 199, "minIlvl": 45, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 100, "maxVal": 149, "minIlvl": 25, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 50,  "maxVal": 99,  "minIlvl": 1,  "weight": 1600 }
+    ]
+  },
+  {
+    "id": "life_regen_suffix",
+    "displayName": "# de Vida Regenerada por Segundo",
+    "type": "suffix",
+    "group": "LifeRegeneration",
+    "itemTypes": ["ring", "amulet", "belt", "helmet", "gloves", "boots", "body_armour", "shield"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 8,  "maxVal": 10, "minIlvl": 55, "weight": 500  },
+      { "tier": 2, "label": "T2", "minVal": 5,  "maxVal": 7,  "minIlvl": 35, "weight": 700  },
+      { "tier": 3, "label": "T3", "minVal": 3,  "maxVal": 4,  "minIlvl": 15, "weight": 1000 },
+      { "tier": 4, "label": "T4", "minVal": 1,  "maxVal": 2,  "minIlvl": 1,  "weight": 1500 }
+    ]
+  },
+  {
+    "id": "attack_speed_suffix",
+    "displayName": "#% mais Velocidade de Ataque",
+    "type": "suffix",
+    "group": "AttackSpeed",
+    "itemTypes": ["ring", "amulet", "gloves"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 8,  "maxVal": 10, "minIlvl": 68, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 6,  "maxVal": 7,  "minIlvl": 50, "weight": 650  },
+      { "tier": 3, "label": "T3", "minVal": 4,  "maxVal": 5,  "minIlvl": 30, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 2,  "maxVal": 3,  "minIlvl": 1,  "weight": 1300 }
+    ]
+  },
+  {
+    "id": "cast_speed_suffix",
+    "displayName": "#% mais Velocidade de Conjuração",
+    "type": "suffix",
+    "group": "CastSpeed",
+    "itemTypes": ["ring", "amulet", "gloves"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 8,  "maxVal": 10, "minIlvl": 68, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 6,  "maxVal": 7,  "minIlvl": 50, "weight": 650  },
+      { "tier": 3, "label": "T3", "minVal": 4,  "maxVal": 5,  "minIlvl": 30, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 2,  "maxVal": 3,  "minIlvl": 1,  "weight": 1300 }
+    ]
+  },
+  {
+    "id": "boots_move_speed",
+    "displayName": "#% mais Velocidade de Movimento",
+    "type": "suffix",
+    "group": "MovementSpeed",
+    "itemTypes": ["boots"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 30, "maxVal": 35, "minIlvl": 65, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 25, "maxVal": 29, "minIlvl": 50, "weight": 600  },
+      { "tier": 3, "label": "T3", "minVal": 20, "maxVal": 24, "minIlvl": 30, "weight": 800  },
+      { "tier": 4, "label": "T4", "minVal": 15, "maxVal": 19, "minIlvl": 15, "weight": 1000 },
+      { "tier": 5, "label": "T5", "minVal": 10, "maxVal": 14, "minIlvl": 1,  "weight": 1300 }
+    ]
+  },
+  {
+    "id": "weapon_attack_speed",
+    "displayName": "#% mais Velocidade de Ataque",
+    "type": "suffix",
+    "group": "AttackSpeed",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 15, "maxVal": 18, "minIlvl": 68, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 11, "maxVal": 14, "minIlvl": 50, "weight": 650  },
+      { "tier": 3, "label": "T3", "minVal": 7,  "maxVal": 10, "minIlvl": 30, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 3,  "maxVal": 6,  "minIlvl": 1,  "weight": 1300 }
+    ]
+  },
+  {
+    "id": "weapon_cast_speed",
+    "displayName": "#% mais Velocidade de Conjuração",
+    "type": "suffix",
+    "group": "CastSpeed",
+    "itemTypes": ["wand", "staff"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 15, "maxVal": 18, "minIlvl": 68, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 11, "maxVal": 14, "minIlvl": 50, "weight": 650  },
+      { "tier": 3, "label": "T3", "minVal": 7,  "maxVal": 10, "minIlvl": 30, "weight": 900  },
+      { "tier": 4, "label": "T4", "minVal": 3,  "maxVal": 6,  "minIlvl": 1,  "weight": 1300 }
+    ]
+  },
+  {
+    "id": "weapon_crit_multi",
+    "displayName": "+#% ao Multiplicador de Dano Crítico",
+    "type": "suffix",
+    "group": "CriticalStrikeMultiplier",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow", "wand", "staff"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 40, "maxVal": 50, "minIlvl": 72, "weight": 350  },
+      { "tier": 2, "label": "T2", "minVal": 28, "maxVal": 39, "minIlvl": 52, "weight": 600  },
+      { "tier": 3, "label": "T3", "minVal": 18, "maxVal": 27, "minIlvl": 32, "weight": 850  },
+      { "tier": 4, "label": "T4", "minVal": 10, "maxVal": 17, "minIlvl": 1,  "weight": 1200 }
+    ]
+  },
+  {
+    "id": "weapon_accuracy",
+    "displayName": "+# de Precisão",
+    "type": "suffix",
+    "group": "Accuracy",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon", "bow"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 300, "maxVal": 400, "minIlvl": 65, "weight": 600  },
+      { "tier": 2, "label": "T2", "minVal": 200, "maxVal": 299, "minIlvl": 45, "weight": 900  },
+      { "tier": 3, "label": "T3", "minVal": 100, "maxVal": 199, "minIlvl": 25, "weight": 1200 },
+      { "tier": 4, "label": "T4", "minVal": 50,  "maxVal": 99,  "minIlvl": 1,  "weight": 1600 }
+    ]
+  },
+  {
+    "id": "weapon_life_leech",
+    "displayName": "#% de Dano de Ataque Absorvido como Vida",
+    "type": "suffix",
+    "group": "LifeLeech",
+    "itemTypes": ["one_hand_weapon", "two_hand_weapon"],
+    "hasTwoValues": false,
+    "tiers": [
+      { "tier": 1, "label": "T1", "minVal": 20, "maxVal": 25, "minIlvl": 55, "weight": 400  },
+      { "tier": 2, "label": "T2", "minVal": 15, "maxVal": 19, "minIlvl": 35, "weight": 700  },
+      { "tier": 3, "label": "T3", "minVal": 8,  "maxVal": 14, "minIlvl": 1,  "weight": 1000 }
+    ]
+  }
+]

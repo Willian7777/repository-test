@@ -1,0 +1,116 @@
+[
+  {
+    "id": "essence_of_greed",
+    "name": "Essence of Greed",
+    "color": "#5da85d",
+    "description": "Garante afixo de Vida Máxima (Prefix) no item.",
+    "guaranteedByItemType": {
+      "ring":        { "modId": "jewellery_life",    "tier": 2 },
+      "amulet":      { "modId": "jewellery_life",    "tier": 2 },
+      "belt":        { "modId": "jewellery_life",    "tier": 2 },
+      "helmet":      { "modId": "armour_life",       "tier": 2 },
+      "gloves":      { "modId": "armour_life",       "tier": 2 },
+      "boots":       { "modId": "armour_life",       "tier": 2 },
+      "body_armour": { "modId": "armour_life",       "tier": 2 },
+      "shield":      { "modId": "armour_life",       "tier": 2 }
+    }
+  },
+  {
+    "id": "essence_of_doubt",
+    "name": "Essence of Doubt",
+    "color": "#6a8abf",
+    "description": "Garante afixo de Mana Máxima (Prefix) no item.",
+    "guaranteedByItemType": {
+      "ring":        { "modId": "jewellery_mana",    "tier": 2 },
+      "amulet":      { "modId": "jewellery_mana",    "tier": 2 },
+      "helmet":      { "modId": "armour_mana",       "tier": 2 },
+      "gloves":      { "modId": "armour_mana",       "tier": 2 },
+      "boots":       { "modId": "armour_mana",       "tier": 2 },
+      "body_armour": { "modId": "armour_mana",       "tier": 2 },
+      "shield":      { "modId": "armour_mana",       "tier": 2 }
+    }
+  },
+  {
+    "id": "essence_of_anger",
+    "name": "Essence of Anger",
+    "color": "#d45a30",
+    "description": "Garante afixo de Dano de Fogo (Prefix) no item.",
+    "guaranteedByItemType": {
+      "ring":               { "modId": "jewellery_fire_damage", "tier": 2 },
+      "amulet":             { "modId": "jewellery_fire_damage", "tier": 2 },
+      "one_hand_weapon":    { "modId": "weapon_fire_damage",    "tier": 2 },
+      "two_hand_weapon":    { "modId": "weapon_fire_damage",    "tier": 2 },
+      "bow":                { "modId": "weapon_fire_damage",    "tier": 2 },
+      "wand":               { "modId": "weapon_fire_damage",    "tier": 2 },
+      "staff":              { "modId": "weapon_fire_damage",    "tier": 2 }
+    }
+  },
+  {
+    "id": "essence_of_hatred",
+    "name": "Essence of Hatred",
+    "color": "#5a9abf",
+    "description": "Garante afixo de Dano de Frio (Prefix) no item.",
+    "guaranteedByItemType": {
+      "ring":               { "modId": "jewellery_cold_damage", "tier": 2 },
+      "amulet":             { "modId": "jewellery_cold_damage", "tier": 2 },
+      "one_hand_weapon":    { "modId": "weapon_cold_damage",    "tier": 2 },
+      "two_hand_weapon":    { "modId": "weapon_cold_damage",    "tier": 2 },
+      "bow":                { "modId": "weapon_cold_damage",    "tier": 2 },
+      "wand":               { "modId": "weapon_cold_damage",    "tier": 2 },
+      "staff":              { "modId": "weapon_cold_damage",    "tier": 2 }
+    }
+  },
+  {
+    "id": "essence_of_wrath",
+    "name": "Essence of Wrath",
+    "color": "#c8e050",
+    "description": "Garante afixo de Dano de Raio (Prefix) no item.",
+    "guaranteedByItemType": {
+      "ring":               { "modId": "jewellery_lightning_damage", "tier": 2 },
+      "amulet":             { "modId": "jewellery_lightning_damage", "tier": 2 },
+      "one_hand_weapon":    { "modId": "weapon_lightning_damage",    "tier": 2 },
+      "two_hand_weapon":    { "modId": "weapon_lightning_damage",    "tier": 2 },
+      "bow":                { "modId": "weapon_lightning_damage",    "tier": 2 },
+      "wand":               { "modId": "weapon_lightning_damage",    "tier": 2 },
+      "staff":              { "modId": "weapon_lightning_damage",    "tier": 2 }
+    }
+  },
+  {
+    "id": "essence_of_torment",
+    "name": "Essence of Torment",
+    "color": "#b87040",
+    "description": "Garante afixo de Dano Físico (Prefix) no item.",
+    "guaranteedByItemType": {
+      "ring":               { "modId": "jewellery_phys_damage",  "tier": 2 },
+      "amulet":             { "modId": "jewellery_phys_damage",  "tier": 2 },
+      "belt":               { "modId": "jewellery_phys_damage",  "tier": 2 },
+      "one_hand_weapon":    { "modId": "weapon_phys_damage",     "tier": 2 },
+      "two_hand_weapon":    { "modId": "weapon_phys_damage",     "tier": 2 },
+      "bow":                { "modId": "weapon_phys_damage",     "tier": 2 }
+    }
+  },
+  {
+    "id": "essence_of_contempt",
+    "name": "Essence of Contempt",
+    "color": "#9a70b8",
+    "description": "Garante afixo de Dano Físico % (Prefix) em armas.",
+    "guaranteedByItemType": {
+      "one_hand_weapon":    { "modId": "weapon_phys_pct",  "tier": 2 },
+      "two_hand_weapon":    { "modId": "weapon_phys_pct",  "tier": 2 },
+      "bow":                { "modId": "weapon_phys_pct",  "tier": 2 }
+    }
+  },
+  {
+    "id": "essence_of_fear",
+    "name": "Essence of Fear",
+    "color": "#7a50a8",
+    "description": "Garante afixo de Evasão (Prefix) em armaduras.",
+    "guaranteedByItemType": {
+      "helmet":      { "modId": "armour_evasion_flat", "tier": 2 },
+      "gloves":      { "modId": "armour_evasion_flat", "tier": 2 },
+      "boots":       { "modId": "armour_evasion_flat", "tier": 2 },
+      "body_armour": { "modId": "armour_evasion_flat", "tier": 2 },
+      "shield":      { "modId": "armour_evasion_flat", "tier": 2 }
+    }
+  }
+]

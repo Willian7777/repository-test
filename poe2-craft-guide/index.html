@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POE2 Craft Guide</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-content">
+      <h1 class="app-title">⚗ POE2 Craft Guide</h1>
+      <p class="disclaimer">
+        ⚠ Probabilidades e valores são <strong>estimativas</strong> baseadas em dados da comunidade, não dados oficiais da GGG.
+      </p>
+    </div>
+  </header>
+
+  <main class="panels-container">
+
+    <!-- ===================== LEFT: ITEM CONFIGURATOR ===================== -->
+    <section class="panel panel-item">
+      <div class="panel-header">
+        <h2>Configurador do Item</h2>
+        <button class="btn-ghost btn-sm" id="btn-clear-item">Limpar</button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo de Item</label>
+          <select id="select-item-type">
+            <option value="">— Selecionar —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Item Level</label>
+          <input type="number" id="input-ilvl" min="1" max="100" value="84">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Raridade Atual</label>
+        <div class="rarity-selector" id="rarity-selector">
+          <button class="rarity-btn active" data-rarity="normal">Normal</button>
+          <button class="rarity-btn" data-rarity="magic">Mágico</button>
+          <button class="rarity-btn" data-rarity="rare">Raro</button>
+        </div>
+      </div>
+
+      <!-- ITEM PREVIEW CARD -->
+      <div class="item-card" id="item-card">
+        <div class="item-card-name" id="item-card-name">Nenhum item selecionado</div>
+        <div class="item-card-type" id="item-card-type"></div>
+        <div class="item-card-separator" id="item-card-separator" style="display:none"></div>
+        <div class="item-card-mods" id="item-card-mods"></div>
+      </div>
+
+      <!-- PREFIXES SECTION -->
+      <div class="mods-section">
+        <div class="mods-section-header">
+          <span class="mods-label prefix-label">PREFIXES</span>
+          <span class="slot-counter" id="prefix-counter">0 / 3</span>
+        </div>
+        <div class="slots-container" id="prefix-slots"></div>
+      </div>
+
+      <!-- SUFFIXES SECTION -->
+      <div class="mods-section">
+        <div class="mods-section-header">
+          <span class="mods-label suffix-label">SUFFIXES</span>
+          <span class="slot-counter" id="suffix-counter">0 / 3</span>
+        </div>
+        <div class="slots-container" id="suffix-slots"></div>
+      </div>
+    </section>
+
+    <!-- ===================== CENTER: CRAFT ACTIONS ===================== -->
+    <section class="panel panel-craft">
+      <div class="panel-header">
+        <h2>Ações de Craft</h2>
+      </div>
+
+      <div class="form-group">
+        <label>Selecionar Moeda</label>
+        <div class="currency-grid" id="currency-grid"></div>
+      </div>
+
+      <div class="currency-info-box" id="currency-info-box">
+        <p class="hint-text">Selecione uma moeda para ver os detalhes</p>
+      </div>
+
+      <button class="btn-primary btn-apply" id="btn-apply" disabled>
+        ▶ Aplicar Moeda
+      </button>
+
+      <div class="divider"></div>
+
+      <div class="form-group">
+        <label>Aplicar Essência</label>
+        <select id="select-essence">
+          <option value="">— Nenhuma Essência —</option>
+        </select>
+        <div class="essence-info-box" id="essence-info-box"></div>
+        <button class="btn-secondary btn-apply-essence" id="btn-apply-essence" disabled>
+          Aplicar Essência
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="history-section">
+        <div class="history-header">
+          <span class="section-label">Histórico</span>
+          <button class="btn-ghost btn-sm" id="btn-undo" disabled>↩ Desfazer</button>
+        </div>
+        <div class="currency-spent" id="currency-spent"></div>
+        <div class="history-list" id="history-list">
+          <p class="hint-text">Nenhuma ação ainda</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== RIGHT: RESULTS ===================== -->
+    <section class="panel panel-results">
+      <div class="panel-header">
+        <h2>Resultados & Planejamento</h2>
+      </div>
+
+      <!-- DESIRED MODS -->
+      <div class="desired-section">
+        <div class="section-label">Afixos Desejados</div>
+        <div class="desired-list" id="desired-list">
+          <p class="hint-text">Nenhum afixo desejado definido</p>
+        </div>
+        <div class="desired-add-row" id="desired-add-row" style="display:none">
+          <select id="select-add-desired">
+            <option value="">— Selecionar afixo —</option>
+          </select>
+        </div>
+        <button class="btn-ghost btn-sm" id="btn-toggle-desired-add">+ Adicionar Afixo</button>
+      </div>
+
+      <!-- CRAFT PATH -->
+      <div class="craft-path-section" id="craft-path-section">
+        <div class="section-label">Caminho Sugerido</div>
+        <div id="craft-path-content">
+          <p class="hint-text">Selecione afixos desejados para ver sugestões</p>
+        </div>
+      </div>
+
+      <!-- PROBABILITY LIST -->
+      <div class="probability-section">
+        <div class="probability-header">
+          <span class="section-label">Pool de Afixos Disponíveis</span>
+          <div class="prob-tabs">
+            <button class="tab-btn active" data-tab="prefix">Prefixes</button>
+            <button class="tab-btn" data-tab="suffix">Suffixes</button>
+          </div>
+        </div>
+        <div class="probability-list" id="probability-list">
+          <p class="hint-text">Selecione um tipo de item para ver o pool de afixos</p>
+        </div>
+      </div>
+
+      <!-- SAVE / LOAD -->
+      <div class="save-section">
+        <div class="section-label">Salvar / Carregar Receita</div>
+        <div class="save-row">
+          <input type="text" id="input-build-name" placeholder="Nome da receita..." maxlength="40">
+          <button class="btn-secondary" id="btn-save-build">Salvar</button>
+        </div>
+        <div class="saved-builds-list" id="saved-builds-list"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- NOTIFICATION TOAST -->
+  <div class="notification" id="notification"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

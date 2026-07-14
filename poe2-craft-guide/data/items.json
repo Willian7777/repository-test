@@ -1,0 +1,15 @@
+[
+  { "id": "ring",            "name": "Ring",                "category": "jewellery" },
+  { "id": "amulet",          "name": "Amulet",              "category": "jewellery" },
+  { "id": "belt",            "name": "Belt",                "category": "jewellery" },
+  { "id": "helmet",          "name": "Helmet",              "category": "armour" },
+  { "id": "gloves",          "name": "Gloves",              "category": "armour" },
+  { "id": "boots",           "name": "Boots",               "category": "armour" },
+  { "id": "body_armour",     "name": "Body Armour",         "category": "armour" },
+  { "id": "shield",          "name": "Shield",              "category": "armour" },
+  { "id": "one_hand_weapon", "name": "Arma de Uma Mão",     "category": "weapon" },
+  { "id": "two_hand_weapon", "name": "Arma de Duas Mãos",  "category": "weapon" },
+  { "id": "bow",             "name": "Bow",                 "category": "weapon" },
+  { "id": "wand",            "name": "Wand",                "category": "weapon" },
+  { "id": "staff",           "name": "Staff",               "category": "weapon" }
+]
