@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>POE2 Craft Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,6 +14,10 @@
   <header class="app-header">
     <div class="header-content">
       <h1 class="app-title">⚗ POE2 Craft Guide</h1>
+      <div class="lang-toggle">
+        <button class="lang-btn active" data-lang="pt-br">PT-BR</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+      </div>
       <p class="disclaimer">
         ⚠ Probabilidades e valores são <strong>estimativas</strong> baseadas em dados da comunidade, não dados oficiais da GGG.
       </p>
@@ -48,6 +55,33 @@
         </div>
       </div>
 
+      <!-- ITEM IMAGE -->
+      <div class="item-image-wrap" id="item-image-wrap">
+        <img id="item-image" src="" alt="" class="item-image" onerror="this.style.display='none'" style="display:none">
+        <div class="item-image-placeholder" id="item-image-placeholder">◈</div>
+      </div>
+
+      <!-- QUALITY -->
+      <div class="quality-section">
+        <div class="quality-header">
+          <span class="mods-label" data-i18n="quality">QUALIDADE</span>
+          <span class="quality-pct-display" id="quality-pct-display">0%</span>
+        </div>
+        <div class="quality-controls">
+          <input type="range" id="input-quality" min="0" max="20" value="0" step="1" class="quality-slider">
+          <select id="select-catalyst" class="catalyst-select" style="display:none">
+            <option value="">— Catalisador —</option>
+            <option value="fertile">Fertile (Vida/Mana)</option>
+            <option value="intrinsic">Intrinsic (Atributos)</option>
+            <option value="turbulent">Turbulent (Dano Elemental)</option>
+            <option value="imbued">Imbued (Feitiços)</option>
+            <option value="abrasive">Abrasive (Ataques)</option>
+            <option value="tempering">Tempering (Defesa)</option>
+            <option value="prismatic">Prismatic (Resistências)</option>
+          </select>
+        </div>
+      </div>
+
       <!-- ITEM PREVIEW CARD -->
       <div class="item-card" id="item-card">
         <div class="item-card-name" id="item-card-name">Nenhum item selecionado</div>
@@ -72,6 +106,15 @@
           <span class="slot-counter" id="suffix-counter">0 / 3</span>
         </div>
         <div class="slots-container" id="suffix-slots"></div>
+      </div>
+
+      <!-- RUNES / SOCKETS -->
+      <div class="mods-section rune-section" id="rune-section" style="display:none">
+        <div class="mods-section-header">
+          <span class="mods-label rune-label" data-i18n="sockets">ENCAIXES (RUNAS)</span>
+          <span class="slot-counter" id="rune-counter">0 / 0</span>
+        </div>
+        <div class="slots-container" id="rune-slots"></div>
       </div>
     </section>
 

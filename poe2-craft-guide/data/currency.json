@@ -5,9 +5,12 @@
     "shortName": "Transmutation",
     "symbol": "T",
     "color": "#6a6aff",
+    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeToMagic.png",
     "category": "standard",
     "description": "Transforma um item Normal em Mágico com 1-2 afixos aleatórios.",
-    "allowedRarities": ["normal"],
+    "allowedRarities": [
+      "normal"
+    ],
     "resultRarity": "magic",
     "action": "convert_to_magic",
     "minMods": 1,
@@ -20,9 +23,12 @@
     "shortName": "Augmentation",
     "symbol": "A",
     "color": "#4a8ab8",
+    "cdnPath": "Art/2DItems/Currency/CurrencyAddModToMagic.png",
     "category": "standard",
     "description": "Adiciona um afixo aleatório a um item Mágico com slot vazio.",
-    "allowedRarities": ["magic"],
+    "allowedRarities": [
+      "magic"
+    ],
     "resultRarity": null,
     "action": "add_mod",
     "minMods": 1,
@@ -37,12 +43,15 @@
     "color": "#3a6a9a",
     "category": "standard",
     "description": "Reforja um item Mágico com novos afixos aleatórios (1-2 mods).",
-    "allowedRarities": ["magic"],
+    "allowedRarities": [
+      "magic"
+    ],
     "resultRarity": null,
     "action": "reroll_all",
     "minMods": 1,
     "maxMods": 2,
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Currency/CurrencyRerollMagic.png"
   },
   {
     "id": "regal_orb",
@@ -52,12 +61,15 @@
     "color": "#c8973a",
     "category": "standard",
     "description": "Transforma um item Mágico em Raro, adicionando 1 afixo aleatório.",
-    "allowedRarities": ["magic"],
+    "allowedRarities": [
+      "magic"
+    ],
     "resultRarity": "rare",
     "action": "upgrade_to_rare",
     "minMods": 1,
     "maxMods": 1,
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeMagicToRare.png"
   },
   {
     "id": "orb_of_alchemy",
@@ -67,12 +79,15 @@
     "color": "#8a6a2a",
     "category": "standard",
     "description": "Transforma um item Normal em Raro com 4-6 afixos aleatórios.",
-    "allowedRarities": ["normal"],
+    "allowedRarities": [
+      "normal"
+    ],
     "resultRarity": "rare",
     "action": "convert_to_rare",
     "minMods": 4,
     "maxMods": 6,
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeToRare.png"
   },
   {
     "id": "chaos_orb",
@@ -82,12 +97,15 @@
     "color": "#d4924a",
     "category": "standard",
     "description": "Reforja um item Raro com novos afixos aleatórios (4-6 mods). Perigo: perde todos os afixos atuais.",
-    "allowedRarities": ["rare"],
+    "allowedRarities": [
+      "rare"
+    ],
     "resultRarity": null,
     "action": "reroll_all",
     "minMods": 4,
     "maxMods": 6,
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Currency/CurrencyRerollRare.png"
   },
   {
     "id": "exalted_orb",
@@ -97,12 +115,15 @@
     "color": "#e8c870",
     "category": "standard",
     "description": "Adiciona 1 afixo aleatório a um item Raro com slot vazio.",
-    "allowedRarities": ["rare"],
+    "allowedRarities": [
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_mod",
     "minMods": 1,
     "maxMods": 1,
-    "requiresOpenSlot": true
+    "requiresOpenSlot": true,
+    "cdnPath": "Art/2DItems/Currency/CurrencyAddModToRare.png"
   },
   {
     "id": "orb_of_annulment",
@@ -112,10 +133,14 @@
     "color": "#c85050",
     "category": "standard",
     "description": "Remove 1 afixo aleatório do item. RISCO: pode remover um afixo desejado.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "remove_mod",
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Currency/AnnulOrb.png"
   },
   {
     "id": "divine_orb",
@@ -125,10 +150,14 @@
     "color": "#e0d060",
     "category": "standard",
     "description": "Rerolha os valores numéricos dos afixos existentes. Os afixos permanecem os mesmos.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "reroll_values",
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Currency/CurrencyModValues.png"
   },
   {
     "id": "orb_of_scouring",
@@ -138,12 +167,15 @@
     "color": "#888888",
     "category": "standard",
     "description": "Remove todos os afixos do item, tornando-o Normal.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": "normal",
     "action": "remove_all",
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Currency/CurrencyConvertToNormal.png"
   },
-
   {
     "id": "omen_of_whittling",
     "name": "Omen of Whittling",
@@ -152,10 +184,13 @@
     "color": "#d060b0",
     "category": "ritual",
     "description": "Remove 1 afixo aleatório de um item Mágico. Cirúrgico: ideal para eliminar o mod indesejado antes de usar Regal Orb.",
-    "allowedRarities": ["magic"],
+    "allowedRarities": [
+      "magic"
+    ],
     "resultRarity": null,
     "action": "remove_mod",
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Runes/OmenWhittling.png"
   },
   {
     "id": "omen_of_refreshment",
@@ -165,10 +200,14 @@
     "color": "#60d0a0",
     "category": "ritual",
     "description": "Rerolha os valores numéricos de todos os afixos (como Divine Orb). Obtido via encontros de Ritual.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "reroll_values",
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Currency/CurrencyModValues.png"
   },
   {
     "id": "omen_of_amelioration",
@@ -178,10 +217,14 @@
     "color": "#90d040",
     "category": "ritual",
     "description": "Melhora 1 afixo aleatório para o próximo tier disponível (T3→T2, T2→T1). Obtido via Ritual.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "upgrade_mod_tier",
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Runes/OmenAmelioration.png"
   },
   {
     "id": "omen_of_dominance",
@@ -191,7 +234,9 @@
     "color": "#d0a020",
     "category": "ritual",
     "description": "Reforja um item Mágico garantindo exatamente 2 modificadores (1 prefix + 1 suffix). Obtido via Ritual.",
-    "allowedRarities": ["magic"],
+    "allowedRarities": [
+      "magic"
+    ],
     "resultRarity": null,
     "action": "reroll_two_mods",
     "requiresOpenSlot": false
@@ -204,10 +249,15 @@
     "color": "#f0d050",
     "category": "ritual",
     "description": "Ativa Bênção da Fortuna: a próxima moeda usada tem 33% de chance de ser aplicada novamente de graça.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "fortune_buff",
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnPath": "Art/2DItems/Runes/OmenFortune.png"
   },
   {
     "id": "omen_of_corruption",
@@ -217,12 +267,14 @@
     "color": "#8020c0",
     "category": "ritual",
     "description": "Corrompe o item com um modificador de Corrupção aleatório. Itens corrompidos não podem ser modificados por moedas normais.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "corrupt",
     "requiresOpenSlot": false
   },
-
   {
     "id": "distilled_paranoia",
     "name": "Distilled Paranoia",
@@ -231,13 +283,19 @@
     "color": "#9050c0",
     "category": "delirium",
     "description": "Adiciona 20% de Qualidade Defensiva a um acessório. Aumenta o peso dos mods de Armadura/Evasão/Energia durante o próximo craft. Obtido de Delirium.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "defense",
     "qualityDescription": "defensivos",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
   {
     "id": "distilled_guilt",
@@ -247,13 +305,19 @@
     "color": "#c05020",
     "category": "delirium",
     "description": "Adiciona 20% de Qualidade de Ataque a um acessório. Aumenta o peso dos mods de Dano Físico/Velocidade de Ataque.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "attack",
     "qualityDescription": "de dano de ataque",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
   {
     "id": "distilled_fear",
@@ -263,13 +327,19 @@
     "color": "#3070d0",
     "category": "delirium",
     "description": "Adiciona 20% de Qualidade Elemental a um acessório. Aumenta o peso dos mods de Dano Elemental (Fogo/Frio/Raio).",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "elemental",
     "qualityDescription": "de dano elemental",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
   {
     "id": "distilled_despair",
@@ -279,13 +349,19 @@
     "color": "#208050",
     "category": "delirium",
     "description": "Adiciona 20% de Qualidade de Resistência a um acessório. Aumenta o peso dos mods de Resistências/Caos.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "resistance",
     "qualityDescription": "de resistências",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
   {
     "id": "distilled_ire",
@@ -295,15 +371,20 @@
     "color": "#d0c030",
     "category": "delirium",
     "description": "Adiciona 20% de Qualidade de Velocidade a um acessório. Aumenta o peso dos mods de Velocidade de Movimento/Ataque/Conjuração.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "speed",
     "qualityDescription": "de velocidade",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
-
   {
     "id": "catalyst_xoph",
     "name": "Xoph's Catalyst",
@@ -312,13 +393,19 @@
     "color": "#d04020",
     "category": "breach",
     "description": "Adiciona 20% de Qualidade Fogo (Xoph) a um acessório. Aumenta o peso dos mods de Dano de Fogo em anéis/amuletos. Obtido de Breachstone de Xoph.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "fire",
     "qualityDescription": "de dano de fogo",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
   {
     "id": "catalyst_tul",
@@ -328,13 +415,19 @@
     "color": "#20a0d0",
     "category": "breach",
     "description": "Adiciona 20% de Qualidade Frio (Tul) a um acessório. Aumenta o peso dos mods de Dano de Frio. Obtido de Breachstone de Tul.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "cold",
     "qualityDescription": "de dano de frio",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
   {
     "id": "catalyst_esh",
@@ -344,13 +437,19 @@
     "color": "#d0d020",
     "category": "breach",
     "description": "Adiciona 20% de Qualidade Raio (Esh) a um acessório. Aumenta o peso dos mods de Dano de Raio. Obtido de Breachstone de Esh.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "lightning",
     "qualityDescription": "de dano de raio",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
   {
     "id": "catalyst_uul",
@@ -360,13 +459,19 @@
     "color": "#c08030",
     "category": "breach",
     "description": "Adiciona 20% de Qualidade Física (Uul-Netol) a um acessório. Aumenta o peso dos mods de Vida/Dano Físico. Obtido de Breachstone de Uul-Netol.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "physical",
     "qualityDescription": "de vida e dano físico",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
   {
     "id": "catalyst_chayula",
@@ -376,15 +481,20 @@
     "color": "#8020c0",
     "category": "breach",
     "description": "Adiciona 20% de Qualidade Caos (Chayula) a um acessório. Aumenta o peso dos mods de Dano de Caos. Obtido de Breachstone de Chayula.",
-    "allowedRarities": ["normal", "magic", "rare"],
+    "allowedRarities": [
+      "normal",
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "add_quality",
     "qualityType": "chaos",
     "qualityDescription": "de dano de caos",
     "requiresOpenSlot": false,
-    "applicableCategories": ["jewellery"]
+    "applicableCategories": [
+      "jewellery"
+    ]
   },
-
   {
     "id": "abyss_jewel_cobalt",
     "name": "Cobalt Jewel (Abyss)",
@@ -393,7 +503,10 @@
     "color": "#3050d0",
     "category": "abyss",
     "description": "Joia Abyss de Inteligência. Pool de mods exclusivo com bônus de Dano de Feitiço, Mana e Velocidade de Conjuração. Craft com Alt/Chaos como qualquer item Mágico/Raro.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "reroll_all",
     "minMods": 1,
@@ -408,7 +521,10 @@
     "color": "#d03030",
     "category": "abyss",
     "description": "Joia Abyss de Força. Pool de mods com bônus de Vida, Dano Físico e Velocidade de Ataque. Ideal para builds melee. Craft com Alt/Chaos.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "reroll_all",
     "minMods": 1,
@@ -423,7 +539,10 @@
     "color": "#30a050",
     "category": "abyss",
     "description": "Joia Abyss de Destreza. Pool com bônus de Evasão, Chance de Acerto Crítico e Velocidade de Movimento. Ideal para builds ranger/rogue.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "reroll_all",
     "minMods": 1,
@@ -438,7 +557,10 @@
     "color": "#d0a0d0",
     "category": "abyss",
     "description": "Joia Abyss multi-atributo. Pool híbrido com mods de todos os tipos — mais versátil mas com valores menores por mod.",
-    "allowedRarities": ["magic", "rare"],
+    "allowedRarities": [
+      "magic",
+      "rare"
+    ],
     "resultRarity": null,
     "action": "reroll_all",
     "minMods": 1,

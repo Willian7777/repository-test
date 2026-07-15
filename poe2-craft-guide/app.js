@@ -7,7 +7,7 @@
 // ============================================================
 // DATA STORE
 // ============================================================
-const DATA = { items: [], mods: [], currency: [], essences: [] };
+const DATA = { items: [], mods: [], currency: [], essences: [], runes: [] };
 
 // ============================================================
 // APPLICATION STATE
@@ -18,16 +18,114 @@ const STATE = {
   ilvl:       84,
   prefixes:   [null, null, null],  // {id, tier, value, value2} | null
   suffixes:   [null, null, null],
+  runes:      [null, null, null, null], // rune id or null (up to 4 sockets)
+  quality:    { amount: 0, catalystType: null }, // quality % + catalyst type
+  lang:       'pt-br',             // 'pt-br' | 'en'
   selectedCurrency: null,
   selectedEssence:  null,
-  desiredMods:      [],            // array of mod ids
-  history:          [],            // array of cloned states
-  currencySpent:    {},            // {currencyId: count}
+  desiredMods:      [],
+  history:          [],
+  currencySpent:    {},
   activeTab:        'prefix',
-  currencyCategory: 'standard',   // active currency category tab
-  fortuneActive:    false,         // Omen of Fortune buff
-  quality:          {},            // {type: pct} quality boosts applied
+  currencyCategory: 'standard',
+  fortuneActive:    false,
 };
+
+// ============================================================
+// I18N — TRANSLATIONS
+// ============================================================
+const I18N = {
+  'pt-br': {
+    'panel.item': 'Configurador do Item', 'panel.craft': 'Ações de Craft', 'panel.results': 'Planejador de Craft',
+    'clear': 'Limpar', 'item.type': 'Tipo de Item', 'item.level': 'Item Level',
+    'rarity': 'Raridade Atual', 'rarity.normal': 'Normal', 'rarity.magic': 'Mágico', 'rarity.rare': 'Raro',
+    'quality': 'QUALIDADE', 'sockets': 'ENCAIXES (RUNAS)',
+    'select.currency': 'Selecionar Moeda', 'apply': '▶ Aplicar Moeda', 'essence': 'Aplicar Essência',
+    'history': 'Histórico', 'undo': '↩ Desfazer',
+    'desired.mods': '1. Afixos Desejados', 'craft.routes': '2. Rotas de Craft', 'mod.pool': 'Pool de Afixos',
+    'save.load': 'Salvar / Carregar', 'save.btn': 'Salvar', 'add.mod': '+ Adicionar Afixo',
+    'no.item': 'Nenhum item selecionado', 'no.mods': 'Nenhum afixo desejado', 'no.actions': 'Nenhuma ação ainda',
+    'no.saves': 'Nenhuma receita salva', 'no.pool': 'Selecione um tipo de item',
+    'catalyst.label': 'Catalisador', 'empty.slot': '— Vazio —', 'empty.rune': '— Sem Runa —',
+  },
+  'en': {
+    'panel.item': 'Item Configurator', 'panel.craft': 'Craft Actions', 'panel.results': 'Craft Planner',
+    'clear': 'Clear', 'item.type': 'Item Type', 'item.level': 'Item Level',
+    'rarity': 'Current Rarity', 'rarity.normal': 'Normal', 'rarity.magic': 'Magic', 'rarity.rare': 'Rare',
+    'quality': 'QUALITY', 'sockets': 'SOCKETS (RUNES)',
+    'select.currency': 'Select Currency', 'apply': '▶ Apply Currency', 'essence': 'Apply Essence',
+    'history': 'History', 'undo': '↩ Undo',
+    'desired.mods': '1. Desired Affixes', 'craft.routes': '2. Craft Routes', 'mod.pool': 'Affix Pool',
+    'save.load': 'Save / Load Recipe', 'save.btn': 'Save', 'add.mod': '+ Add Affix',
+    'no.item': 'No item selected', 'no.mods': 'No desired affixes defined', 'no.actions': 'No actions yet',
+    'no.saves': 'No saved recipes', 'no.pool': 'Select an item type',
+    'catalyst.label': 'Catalyst', 'empty.slot': '— Empty —', 'empty.rune': '— No Rune —',
+  },
+};
+function t(key) { return I18N[STATE.lang]?.[key] ?? I18N['pt-br']?.[key] ?? key; }
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (el.tagName === 'INPUT' && el.type !== 'range') el.placeholder = t(key);
+    else el.textContent = t(key);
+  });
+  // Rarity buttons
+  document.querySelectorAll('.rarity-btn').forEach(btn => {
+    btn.textContent = t('rarity.' + btn.dataset.rarity);
+  });
+  // Panel headers
+  const ph = document.querySelectorAll('.panel-header h2');
+  if (ph[0]) ph[0].textContent = t('panel.item');
+  if (ph[1]) ph[1].textContent = t('panel.craft');
+  if (ph[2]) ph[2].textContent = t('panel.results');
+}
+
+// ============================================================
+// ITEM IMAGE HELPERS
+// ============================================================
+const CDN_BASE = 'https://web.poecdn.com/image/';
+
+function getItemImageUrl(item) {
+  if (!item) return null;
+  if (item.cdnPath) return CDN_BASE + item.cdnPath;
+  const clean = item.name.replace(/[''`\-]/g, '').replace(/\s+/g, ' ').trim();
+  const camel = clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+  const paths = {
+    ring:            `Art/2DItems/Rings/${camel}.png`,
+    amulet:          `Art/2DItems/Amulets/${camel}.png`,
+    belt:            `Art/2DItems/Belts/${camel}.png`,
+    helmet:          `Art/2DItems/Armours/Helmets/${camel}.png`,
+    gloves:          `Art/2DItems/Armours/Gloves/${camel}.png`,
+    boots:           `Art/2DItems/Armours/Boots/${camel}.png`,
+    body_armour:     `Art/2DItems/Armours/BodyArmours/${camel}.png`,
+    shield:          `Art/2DItems/Armours/Shields/${camel}.png`,
+    one_hand_weapon: `Art/2DItems/Weapons/OneHandWeapons/OneHandSwords/${camel}.png`,
+    two_hand_weapon: `Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/${camel}.png`,
+    bow:             `Art/2DItems/Weapons/TwoHandWeapons/Bows/${camel}.png`,
+    wand:            `Art/2DItems/Weapons/OneHandWeapons/Wands/${camel}.png`,
+    staff:           `Art/2DItems/Weapons/TwoHandWeapons/Staves/${camel}.png`,
+  };
+  const p = paths[item.baseType || item.id];
+  return p ? CDN_BASE + p : null;
+}
+
+// ============================================================
+// SOCKET HELPERS
+// ============================================================
+const SOCKETS_BY_BASE_TYPE = {
+  ring: 0, amulet: 0, belt: 0,
+  helmet: 2, gloves: 2, boots: 2, body_armour: 4, shield: 2,
+  one_hand_weapon: 2, two_hand_weapon: 4, bow: 4, wand: 1, staff: 3,
+};
+
+function getMaxSockets() {
+  const item = getItem(STATE.itemType);
+  if (!item) return 0;
+  return SOCKETS_BY_BASE_TYPE[item.baseType || item.id] || 0;
+}
+
+function getRune(id) { return DATA.runes.find(r => r.id === id); }
 
 // ============================================================
 // UTILITY HELPERS
@@ -962,17 +1060,113 @@ function renderItemPanel() {
   document.querySelectorAll('.rarity-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.rarity === STATE.rarity);
   });
-
-  // Sync ilvl
   document.getElementById('input-ilvl').value = STATE.ilvl;
-
-  // Sync item type select
   const typeSelect = document.getElementById('select-item-type');
   if (typeSelect.value !== STATE.itemType) typeSelect.value = STATE.itemType;
 
+  renderItemImage();
+  renderQualitySection();
   renderItemCard();
   renderModSlots('prefix');
   renderModSlots('suffix');
+  renderRuneSection();
+}
+
+function renderItemImage() {
+  const wrap = document.getElementById('item-image-wrap');
+  const img  = document.getElementById('item-image');
+  const ph   = document.getElementById('item-image-placeholder');
+  if (!wrap) return;
+
+  const item = getItem(STATE.itemType);
+  const url  = getItemImageUrl(item);
+
+  if (url) {
+    img.src = url;
+    img.alt = item.name;
+    img.style.display = 'block';
+    img.onerror = () => { img.style.display = 'none'; ph.style.display = 'block'; };
+    ph.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    ph.style.display = 'block';
+  }
+}
+
+function renderQualitySection() {
+  const slider  = document.getElementById('input-quality');
+  const display = document.getElementById('quality-pct-display');
+  const catSel  = document.getElementById('select-catalyst');
+  if (!slider) return;
+
+  slider.value = STATE.quality.amount;
+  if (display) display.textContent = `${STATE.quality.amount}%`;
+
+  const item = getItem(STATE.itemType);
+  const isJewellery = item?.category === 'jewellery';
+  if (catSel) {
+    catSel.style.display = isJewellery ? 'block' : 'none';
+    if (catSel.value !== (STATE.quality.catalystType || '')) {
+      catSel.value = STATE.quality.catalystType || '';
+    }
+  }
+}
+
+function renderRuneSection() {
+  const section = document.getElementById('rune-section');
+  const slots   = document.getElementById('rune-slots');
+  const counter = document.getElementById('rune-counter');
+  if (!section || !slots) return;
+
+  const maxSockets = getMaxSockets();
+  section.style.display = maxSockets > 0 ? 'block' : 'none';
+  if (maxSockets === 0) return;
+
+  const filledRunes = STATE.runes.slice(0, maxSockets).filter(Boolean).length;
+  if (counter) counter.textContent = `${filledRunes} / ${maxSockets}`;
+
+  slots.innerHTML = '';
+  const item = getItem(STATE.itemType);
+  const baseType = item?.baseType || item?.id || '';
+
+  for (let i = 0; i < maxSockets; i++) {
+    const currentRune = STATE.runes[i] || null;
+    const wrapDiv = document.createElement('div');
+    wrapDiv.className = 'mod-slot rune-slot';
+
+    const idx = document.createElement('span');
+    idx.className = 'mod-slot-index';
+    idx.textContent = i + 1;
+
+    const sel = document.createElement('select');
+    sel.dataset.runeIndex = i;
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = t('empty.rune');
+    sel.appendChild(emptyOpt);
+
+    // Filter runes applicable to this item base type
+    DATA.runes.filter(r => r.applicableBaseTypes.includes(baseType)).forEach(rune => {
+      const opt = document.createElement('option');
+      opt.value = rune.id;
+      const effectKey = STATE.lang === 'en' ? rune.effectEn : rune.effect;
+      opt.textContent = `${rune.name} — ${effectKey}`;
+      if (currentRune === rune.id) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    if (currentRune) sel.classList.add('has-value');
+
+    sel.addEventListener('change', e => {
+      STATE.runes[i] = e.target.value || null;
+      renderRuneSection();
+      renderItemCard();
+    });
+
+    wrapDiv.appendChild(idx);
+    wrapDiv.appendChild(sel);
+    slots.appendChild(wrapDiv);
+  }
 }
 
 function renderItemCard() {
@@ -997,8 +1191,20 @@ function renderItemCard() {
   typeEl.textContent = rarityLabel(STATE.rarity);
   sep.style.display = 'block';
 
-  // Mostrar implicit do item base
   modsEl.innerHTML = '';
+
+  // Quality line
+  if (STATE.quality.amount > 0) {
+    const qDiv = document.createElement('div');
+    qDiv.className = 'item-card-quality';
+    const catalyst = STATE.quality.catalystType
+      ? ` (${STATE.quality.catalystType})`
+      : '';
+    qDiv.textContent = `Qualidade: ${STATE.quality.amount}%${catalyst}`;
+    modsEl.appendChild(qDiv);
+  }
+
+  // Implicit
   if (item.implicit) {
     const implDiv = document.createElement('div');
     implDiv.className = 'item-card-implicit';
@@ -1032,6 +1238,42 @@ function renderItemCard() {
     div.innerHTML = `${formatModValue(mod, slot)} <span class="mod-tier-tag">[${tierTag}]</span>`;
     modsEl.appendChild(div);
   });
+
+  // Runes in card
+  const maxSockets = getMaxSockets();
+  const filledRunes = STATE.runes.slice(0, maxSockets).filter(Boolean);
+  if (maxSockets > 0) {
+    const runeSep = document.createElement('div');
+    runeSep.className = 'item-card-rune-sep';
+    modsEl.appendChild(runeSep);
+
+    // Socket dots indicator
+    const dotsRow = document.createElement('div');
+    dotsRow.className = 'socket-dots';
+    for (let i = 0; i < maxSockets; i++) {
+      const dot = document.createElement('div');
+      dot.className = `socket-dot${STATE.runes[i] ? ' filled' : ''}`;
+      dotsRow.appendChild(dot);
+    }
+    modsEl.appendChild(dotsRow);
+
+    filledRunes.forEach(runeId => {
+      const rune = getRune(runeId);
+      if (!rune) return;
+      const div = document.createElement('div');
+      div.className = 'item-card-rune';
+      const effectKey = STATE.lang === 'en' ? rune.effectEn : rune.effect;
+      div.textContent = `[${rune.name}] ${effectKey.replace('#', rune.value).replace('#', rune.value2 || '')}`;
+      modsEl.appendChild(div);
+    });
+
+    if (!filledRunes.length) {
+      const emptyRune = document.createElement('span');
+      emptyRune.style.cssText = 'font-size:0.68rem;color:var(--text-hint);font-style:italic';
+      emptyRune.textContent = `${maxSockets} encaixe(s) disponível(is)`;
+      modsEl.appendChild(emptyRune);
+    }
+  }
 }
 
 function renderModSlots(type) {
@@ -1159,8 +1401,25 @@ function renderCurrencyGrid() {
 
     const sym = document.createElement('div');
     sym.className = 'currency-symbol';
-    sym.style.background = c.color;
-    sym.textContent = c.symbol;
+    if (c.cdnPath) {
+      const imgEl = document.createElement('img');
+      imgEl.src = CDN_BASE + c.cdnPath;
+      imgEl.alt = c.shortName;
+      imgEl.className = 'currency-img';
+      imgEl.onerror = () => {
+        imgEl.style.display = 'none';
+        const fb = document.createElement('span');
+        fb.className = 'currency-img-fallback';
+        fb.style.background = c.color;
+        fb.textContent = c.symbol;
+        sym.appendChild(fb);
+      };
+      sym.style.background = 'transparent';
+      sym.appendChild(imgEl);
+    } else {
+      sym.style.background = c.color;
+      sym.textContent = c.symbol;
+    }
 
     const name = document.createElement('span');
     name.className = 'currency-name';
@@ -1473,16 +1732,18 @@ function renderAll() {
 // ============================================================
 async function loadAllData() {
   try {
-    const [items, mods, currency, essences] = await Promise.all([
+    const [items, mods, currency, essences, runes] = await Promise.all([
       fetch('data/items.json').then(r => r.json()),
       fetch('data/mods.json').then(r => r.json()),
       fetch('data/currency.json').then(r => r.json()),
       fetch('data/essences.json').then(r => r.json()),
+      fetch('data/runes.json').then(r => r.json()),
     ]);
     DATA.items    = items;
     DATA.mods     = mods;
     DATA.currency = currency;
     DATA.essences = essences;
+    DATA.runes    = runes;
   } catch (err) {
     console.error('Erro ao carregar dados:', err);
     showNotification('Erro ao carregar dados JSON. Use um servidor local (ex: Live Server).', 'danger');
@@ -1542,6 +1803,7 @@ function initEventListeners() {
     STATE.itemType = e.target.value;
     STATE.prefixes = [null, null, null];
     STATE.suffixes = [null, null, null];
+    STATE.runes    = [null, null, null, null];
     STATE.selectedEssence = null;
     renderAll();
   });
@@ -1580,7 +1842,9 @@ function initEventListeners() {
     STATE.ilvl       = 84;
     STATE.prefixes   = [null, null, null];
     STATE.suffixes   = [null, null, null];
+    STATE.runes      = [null, null, null, null];
     STATE.desiredMods = [];
+    STATE.quality    = { amount: 0, catalystType: null };
     document.getElementById('select-item-type').value = '';
     renderAll();
   });
@@ -1648,6 +1912,36 @@ function initEventListeners() {
   document.getElementById('input-build-name').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('btn-save-build').click();
   });
+
+  // Language toggle
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      STATE.lang = btn.dataset.lang;
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b === btn));
+      applyI18n();
+      renderAll();
+    });
+  });
+
+  // Quality slider
+  const qualitySlider = document.getElementById('input-quality');
+  if (qualitySlider) {
+    qualitySlider.addEventListener('input', e => {
+      STATE.quality.amount = parseInt(e.target.value) || 0;
+      const disp = document.getElementById('quality-pct-display');
+      if (disp) disp.textContent = `${STATE.quality.amount}%`;
+      renderItemCard();
+    });
+  }
+
+  // Catalyst selector
+  const catalystSel = document.getElementById('select-catalyst');
+  if (catalystSel) {
+    catalystSel.addEventListener('change', e => {
+      STATE.quality.catalystType = e.target.value || null;
+      renderItemCard();
+    });
+  }
 }
 
 // ============================================================
@@ -1657,5 +1951,6 @@ function initEventListeners() {
   await loadAllData();
   populateItemTypeSelect();
   initEventListeners();
+  applyI18n();
   renderAll();
 })();

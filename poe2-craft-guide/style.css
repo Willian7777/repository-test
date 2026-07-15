@@ -29,6 +29,7 @@
 
   --prefix-color:    #e8a060;
   --suffix-color:    #70b8e0;
+  --rune-color:      #a070d8;
   --desired-color:   #60c060;
   --desired-bg:      rgba(60, 120, 60, 0.18);
 
@@ -42,13 +43,19 @@
   --radius-lg: 8px;
 
   --transition: 0.15s ease;
+
+  /* Fonts */
+  --font-heading:    'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  --font-subheading: 'Cinzel', Georgia, serif;
+  --font-body:       'Crimson Text', Georgia, serif;
+  --font-ui:         'Segoe UI', system-ui, sans-serif;
 }
 
 /* ============================================================ RESET */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 14px; }
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-ui);
   background: var(--bg-page);
   color: var(--text-primary);
   min-height: 100vh;
@@ -79,13 +86,37 @@ body {
   flex-wrap: wrap;
 }
 .app-title {
-  font-family: 'Georgia', serif;
-  font-size: 1.5rem;
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
   color: var(--border-bright);
   letter-spacing: 2px;
   text-shadow: 0 0 15px rgba(200,151,58,0.5);
   white-space: nowrap;
 }
+.lang-toggle {
+  display: flex;
+  gap: 3px;
+  margin-left: 4px;
+}
+.lang-btn {
+  padding: 3px 9px;
+  border: 1px solid var(--border-medium);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  font-family: var(--font-ui);
+  transition: all var(--transition);
+}
+.lang-btn.active {
+  border-color: var(--border-bright);
+  color: var(--border-bright);
+  background: rgba(200,151,58,0.12);
+}
+.lang-btn:hover:not(.active) { border-color: var(--border-gold); color: var(--text-secondary); }
 .disclaimer {
   font-size: 0.78rem;
   color: var(--warning);
@@ -124,10 +155,10 @@ body {
   justify-content: space-between;
 }
 .panel-header h2 {
-  font-family: 'Georgia', serif;
-  font-size: 0.9rem;
+  font-family: var(--font-subheading);
+  font-size: 0.82rem;
   color: var(--border-bright);
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
@@ -152,7 +183,8 @@ body {
 .form-row .form-group { flex: 1; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  font-family: var(--font-subheading);
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--text-muted);
@@ -195,17 +227,17 @@ select option { background: #1a1408; color: var(--text-primary); }
 
 /* ============================================================ ITEM CARD */
 .item-card {
-  margin: 0 14px;
+  margin: 0 14px 10px;
   background: var(--bg-slot-empty);
   border: 1px solid var(--border-gold);
   border-radius: var(--radius-md);
-  padding: 10px 12px;
+  padding: 8px 12px 10px;
   min-height: 56px;
   text-align: center;
 }
 .item-card-name {
-  font-family: 'Georgia', serif;
-  font-size: 1rem;
+  font-family: var(--font-subheading);
+  font-size: 0.95rem;
   color: var(--text-muted);
   margin-bottom: 2px;
 }
@@ -220,7 +252,8 @@ select option { background: #1a1408; color: var(--text-primary); }
 }
 .item-card-mods { text-align: left; }
 .item-card-mod-entry {
-  font-size: 0.8rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   padding: 2px 0;
   line-height: 1.4;
 }
@@ -790,4 +823,145 @@ select option { background: #1a1408; color: var(--text-primary); }
   .panels-container { grid-template-columns: 1fr; }
   .panel-item { grid-column: auto; }
   .currency-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* ============================================================ ITEM IMAGE */
+.item-image-wrap {
+  margin: 4px auto 2px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 64px;
+}
+.item-image {
+  max-height: 60px;
+  max-width: 60px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(200,151,58,0.5));
+  transition: filter var(--transition);
+}
+.item-image-wrap:hover .item-image { filter: drop-shadow(0 0 10px rgba(200,151,58,0.9)); }
+.item-image-placeholder {
+  font-size: 2.2rem;
+  color: var(--border-medium);
+  line-height: 1;
+}
+
+/* ============================================================ QUALITY SECTION */
+.quality-section {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-faint);
+}
+.quality-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.quality-pct-display {
+  font-family: var(--font-subheading);
+  font-size: 0.8rem;
+  color: var(--border-bright);
+  font-weight: 600;
+}
+.quality-controls { display: flex; flex-direction: column; gap: 5px; }
+.quality-slider {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-medium);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+}
+.quality-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--border-bright);
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(200,151,58,0.6);
+}
+.quality-slider:focus { outline: none; }
+.catalyst-select {
+  font-size: 0.75rem;
+  padding: 4px 6px;
+  border-color: rgba(160,112,216,0.4);
+  color: var(--rune-color);
+}
+.item-card-quality {
+  font-size: 0.72rem;
+  color: #b0b060;
+  font-style: italic;
+  text-align: center;
+  padding: 2px 0;
+}
+
+/* ============================================================ RUNE / SOCKET SECTION */
+.rune-section { }
+.rune-label { color: var(--rune-color); }
+.rune-slot select {
+  flex: 1;
+  font-size: 0.78rem;
+  padding: 5px 6px;
+  border-color: var(--border-faint);
+}
+.rune-slot select.has-value {
+  border-color: rgba(160,112,216,0.6);
+  color: var(--rune-color);
+}
+.item-card-rune {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 2px 0;
+  color: var(--rune-color);
+}
+.item-card-rune-sep {
+  border-top: 1px solid rgba(160,112,216,0.25);
+  margin: 4px 0;
+}
+/* Socket indicator dots */
+.socket-dots {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.socket-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-page);
+  transition: all var(--transition);
+}
+.socket-dot.filled {
+  background: var(--rune-color);
+  border-color: var(--rune-color);
+  box-shadow: 0 0 4px var(--rune-color);
+}
+
+/* ============================================================ CURRENCY IMAGE */
+.currency-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 50%;
+  display: block;
+}
+.currency-img-fallback {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
