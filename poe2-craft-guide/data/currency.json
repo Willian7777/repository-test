@@ -5,7 +5,7 @@
     "shortName": "Transmutation",
     "symbol": "T",
     "color": "#6a6aff",
-    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeToMagic.png",
+    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeToMagic.webp",
     "category": "standard",
     "description": "Transforma um item Normal em Mágico com 1-2 afixos aleatórios.",
     "allowedRarities": [
@@ -15,7 +15,8 @@
     "action": "convert_to_magic",
     "minMods": 1,
     "maxMods": 2,
-    "requiresOpenSlot": false
+    "requiresOpenSlot": false,
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "orb_of_augmentation",
@@ -23,7 +24,7 @@
     "shortName": "Augmentation",
     "symbol": "A",
     "color": "#4a8ab8",
-    "cdnPath": "Art/2DItems/Currency/CurrencyAddModToMagic.png",
+    "cdnPath": "Art/2DItems/Currency/CurrencyAddModToMagic.webp",
     "category": "standard",
     "description": "Adiciona um afixo aleatório a um item Mágico com slot vazio.",
     "allowedRarities": [
@@ -33,7 +34,8 @@
     "action": "add_mod",
     "minMods": 1,
     "maxMods": 1,
-    "requiresOpenSlot": true
+    "requiresOpenSlot": true,
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "orb_of_alteration",
@@ -51,7 +53,8 @@
     "minMods": 1,
     "maxMods": 2,
     "requiresOpenSlot": false,
-    "cdnPath": "Art/2DItems/Currency/CurrencyRerollMagic.png"
+    "cdnPath": "Art/2DItems/Currency/CurrencyRerollMagic.webp",
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "regal_orb",
@@ -69,7 +72,8 @@
     "minMods": 1,
     "maxMods": 1,
     "requiresOpenSlot": false,
-    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeMagicToRare.png"
+    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeMagicToRare.webp",
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "orb_of_alchemy",
@@ -87,7 +91,8 @@
     "minMods": 4,
     "maxMods": 6,
     "requiresOpenSlot": false,
-    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeToRare.png"
+    "cdnPath": "Art/2DItems/Currency/CurrencyUpgradeToRare.webp",
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "chaos_orb",
@@ -105,7 +110,8 @@
     "minMods": 4,
     "maxMods": 6,
     "requiresOpenSlot": false,
-    "cdnPath": "Art/2DItems/Currency/CurrencyRerollRare.png"
+    "cdnPath": "Art/2DItems/Currency/CurrencyRerollRare.webp",
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "exalted_orb",
@@ -123,7 +129,8 @@
     "minMods": 1,
     "maxMods": 1,
     "requiresOpenSlot": true,
-    "cdnPath": "Art/2DItems/Currency/CurrencyAddModToRare.png"
+    "cdnPath": "Art/2DItems/Currency/CurrencyAddModToRare.webp",
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "orb_of_annulment",
@@ -140,7 +147,8 @@
     "resultRarity": null,
     "action": "remove_mod",
     "requiresOpenSlot": false,
-    "cdnPath": "Art/2DItems/Currency/AnnulOrb.png"
+    "cdnPath": "Art/2DItems/Currency/AnnullOrb.webp",
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "divine_orb",
@@ -157,7 +165,8 @@
     "resultRarity": null,
     "action": "reroll_values",
     "requiresOpenSlot": false,
-    "cdnPath": "Art/2DItems/Currency/CurrencyModValues.png"
+    "cdnPath": "Art/2DItems/Currency/CurrencyModValues.webp",
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "orb_of_scouring",
@@ -174,7 +183,8 @@
     "resultRarity": "normal",
     "action": "remove_all",
     "requiresOpenSlot": false,
-    "cdnPath": "Art/2DItems/Currency/CurrencyConvertToNormal.png"
+    "cdnPath": "Art/2DItems/Currency/CurrencyConvertToNormal.webp",
+    "cdnBase": "https://cdn.poe2db.tw/image/"
   },
   {
     "id": "omen_of_whittling",

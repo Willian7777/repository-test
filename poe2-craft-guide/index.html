@@ -34,11 +34,15 @@
       </div>
 
       <div class="form-row">
-        <div class="form-group">
+        <div class="form-group" style="flex:2">
           <label>Tipo de Item</label>
-          <select id="select-item-type">
-            <option value="">— Selecionar —</option>
-          </select>
+          <div class="item-select-wrap">
+            <input type="text" id="input-item-search" placeholder="Buscar item... (ex: Iron Ring)" autocomplete="off">
+            <select id="select-item-type" style="display:none">
+              <option value="">— Selecionar —</option>
+            </select>
+            <div class="item-picker-dropdown" id="item-picker-dropdown" style="display:none"></div>
+          </div>
         </div>
         <div class="form-group">
           <label>Item Level</label>

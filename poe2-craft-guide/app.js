@@ -84,30 +84,66 @@ function applyI18n() {
 // ============================================================
 // ITEM IMAGE HELPERS
 // ============================================================
-const CDN_BASE = 'https://web.poecdn.com/image/';
+const CDN_BASE    = 'https://cdn.poe2db.tw/image/';  // POE2 specific CDN
+const CDN_POE2    = 'https://cdn.poe2db.tw/image/';
+
+// Only these baseTypes have reliable auto-generated CDN paths (verified against poe2db.tw)
+const AUTO_CDN_TYPES = new Set(['ring', 'amulet']);
 
 function getItemImageUrl(item) {
   if (!item) return null;
-  if (item.cdnPath) return CDN_BASE + item.cdnPath;
-  const clean = item.name.replace(/[''`\-]/g, '').replace(/\s+/g, ' ').trim();
-  const camel = clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+
+  // Use explicit cdnPath if available (for items with code-based art names)
+  if (item.cdnPath) return CDN_POE2 + item.cdnPath;
+
+  // Auto-generate only for types where poe2db.tw CDN uses Basetypes/{DisplayName}.webp
+  const base = item.baseType || item.id;
+  if (!AUTO_CDN_TYPES.has(base)) return null;
+
+  const clean = item.name.replace(/[''\u2019`\-]/g, '').replace(/\s+/g, ' ').trim();
+  const camel = clean.split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join('')
+    .replace(/[^A-Za-z0-9]/g, '');
+
   const paths = {
-    ring:            `Art/2DItems/Rings/${camel}.png`,
-    amulet:          `Art/2DItems/Amulets/${camel}.png`,
-    belt:            `Art/2DItems/Belts/${camel}.png`,
-    helmet:          `Art/2DItems/Armours/Helmets/${camel}.png`,
-    gloves:          `Art/2DItems/Armours/Gloves/${camel}.png`,
-    boots:           `Art/2DItems/Armours/Boots/${camel}.png`,
-    body_armour:     `Art/2DItems/Armours/BodyArmours/${camel}.png`,
-    shield:          `Art/2DItems/Armours/Shields/${camel}.png`,
-    one_hand_weapon: `Art/2DItems/Weapons/OneHandWeapons/OneHandSwords/${camel}.png`,
-    two_hand_weapon: `Art/2DItems/Weapons/TwoHandWeapons/TwoHandSwords/${camel}.png`,
-    bow:             `Art/2DItems/Weapons/TwoHandWeapons/Bows/${camel}.png`,
-    wand:            `Art/2DItems/Weapons/OneHandWeapons/Wands/${camel}.png`,
-    staff:           `Art/2DItems/Weapons/TwoHandWeapons/Staves/${camel}.png`,
+    ring:   `Art/2DItems/Rings/Basetypes/${camel}.webp`,
+    amulet: `Art/2DItems/Amulets/Basetypes/${camel}.webp`,
   };
-  const p = paths[item.baseType || item.id];
-  return p ? CDN_BASE + p : null;
+  const p = paths[base];
+  return p ? CDN_POE2 + p : null;
+}
+
+function getItemImageUrl(item) {
+  if (!item) return null;
+  // Use explicit cdnPath if available (for non-standard art names)
+  if (item.cdnPath) return CDN_POE2 + item.cdnPath;
+
+  // Auto-generate from name — POE2 uses Basetypes/ subdirectory
+  const clean = item.name.replace(/[''’`\-]/g, '').replace(/\s+/g, ' ').trim();
+  const camel = clean.split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join('')
+    .replace(/[^A-Za-z0-9]/g, '');
+
+  const base = item.baseType || item.id;
+  const paths = {
+    ring:            `Art/2DItems/Rings/Basetypes/${camel}.webp`,
+    amulet:          `Art/2DItems/Amulets/Basetypes/${camel}.webp`,
+    belt:            `Art/2DItems/Belts/Basetypes/${camel}.webp`,
+    helmet:          `Art/2DItems/Armours/Helmets/Basetypes/${camel}.webp`,
+    gloves:          `Art/2DItems/Armours/Gloves/Basetypes/${camel}.webp`,
+    boots:           `Art/2DItems/Armours/Boots/Basetypes/${camel}.webp`,
+    body_armour:     `Art/2DItems/Armours/BodyArmours/Basetypes/${camel}.webp`,
+    shield:          `Art/2DItems/Armours/Shields/Basetypes/${camel}.webp`,
+    one_hand_weapon: `Art/2DItems/Weapons/OneHandWeapons/Basetypes/${camel}.webp`,
+    two_hand_weapon: `Art/2DItems/Weapons/TwoHandWeapons/Basetypes/${camel}.webp`,
+    bow:             `Art/2DItems/Weapons/TwoHandWeapons/Bows/Basetypes/${camel}.webp`,
+    wand:            `Art/2DItems/Weapons/OneHandWeapons/Wands/Basetypes/${camel}.webp`,
+    staff:           `Art/2DItems/Weapons/TwoHandWeapons/Staves/Basetypes/${camel}.webp`,
+  };
+  const p = paths[base];
+  return p ? CDN_POE2 + p : null;
 }
 
 // ============================================================
@@ -1027,6 +1063,7 @@ function loadBuild(index) {
   STATE.desiredMods = b.desiredMods ? [...b.desiredMods] : [];
   STATE.history     = [];
   STATE.currencySpent = {};
+  if (window._syncItemPicker) window._syncItemPicker();
   renderAll();
   showNotification(`Receita "${b.name}" carregada!`, 'success');
 }
@@ -1402,8 +1439,9 @@ function renderCurrencyGrid() {
     const sym = document.createElement('div');
     sym.className = 'currency-symbol';
     if (c.cdnPath) {
+      const baseUrl = c.cdnBase || CDN_POE2;
       const imgEl = document.createElement('img');
-      imgEl.src = CDN_BASE + c.cdnPath;
+      imgEl.src = baseUrl + c.cdnPath;
       imgEl.alt = c.shortName;
       imgEl.className = 'currency-img';
       imgEl.onerror = () => {
@@ -1752,30 +1790,20 @@ async function loadAllData() {
 }
 
 function populateItemTypeSelect() {
+  // Also populate hidden <select> for backward compat
   const sel = document.getElementById('select-item-type');
 
   const baseTypeLabels = {
-    ring:            'Anéis',
-    amulet:          'Amuletos',
-    belt:            'Cintos',
-    helmet:          'Capacetes',
-    gloves:          'Luvas',
-    boots:           'Botas',
-    body_armour:     'Peitorais',
-    shield:          'Escudos',
-    bow:             'Arcos',
-    one_hand_weapon: 'Armas de Uma Mão',
-    two_hand_weapon: 'Armas de Duas Mãos',
-    wand:            'Varinhas',
+    ring:            'Anéis',     amulet:      'Amuletos',
+    belt:            'Cintos',    helmet:      'Capacetes',
+    gloves:          'Luvas',     boots:       'Botas',
+    body_armour:     'Peitorais', shield:      'Escudos',
+    bow:             'Arcos',     one_hand_weapon: 'Armas 1M',
+    two_hand_weapon: 'Armas 2M',  wand:        'Varinhas',
     staff:           'Cajados',
   };
-  const baseTypeOrder = [
-    'ring', 'amulet', 'belt',
-    'helmet', 'gloves', 'boots', 'body_armour', 'shield',
-    'bow', 'one_hand_weapon', 'two_hand_weapon', 'wand', 'staff',
-  ];
+  const baseTypeOrder = ['ring','amulet','belt','helmet','gloves','boots','body_armour','shield','bow','one_hand_weapon','two_hand_weapon','wand','staff'];
 
-  // Agrupar itens por baseType
   const grouped = {};
   DATA.items.forEach(item => {
     const key = item.baseType || item.id;
@@ -1783,6 +1811,7 @@ function populateItemTypeSelect() {
     grouped[key].push(item);
   });
 
+  // Populate hidden select
   baseTypeOrder.forEach(bt => {
     if (!grouped[bt]) return;
     const optGroup = document.createElement('optgroup');
@@ -1795,11 +1824,155 @@ function populateItemTypeSelect() {
     });
     sel.appendChild(optGroup);
   });
+
+  // Init visual picker
+  initItemPicker(grouped, baseTypeOrder, baseTypeLabels);
+}
+
+function initItemPicker(grouped, order, labels) {
+  const searchInput = document.getElementById('input-item-search');
+  const dropdown    = document.getElementById('item-picker-dropdown');
+  if (!searchInput || !dropdown) return;
+
+  let highlightIndex = -1;
+  let visibleOptions = [];
+
+  function getItemUrl(item) { return getItemImageUrl(item); }
+
+  function renderDropdown(query = '') {
+    dropdown.innerHTML = '';
+    visibleOptions = [];
+    const q = query.toLowerCase().trim();
+
+    order.forEach(bt => {
+      const items = (grouped[bt] || []).filter(item =>
+        !q || item.name.toLowerCase().includes(q)
+      );
+      if (!items.length) return;
+
+      const groupLabel = document.createElement('div');
+      groupLabel.className = 'item-picker-group-label';
+      groupLabel.textContent = labels[bt] || bt;
+      dropdown.appendChild(groupLabel);
+
+      items.forEach(item => {
+        const opt = document.createElement('div');
+        opt.className = `item-picker-option${STATE.itemType === item.id ? ' selected' : ''}`;
+        opt.dataset.itemId = item.id;
+
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'item-picker-img-wrap';
+
+        const url = getItemUrl(item);
+        if (url) {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = item.name;
+          img.className = 'item-picker-img';
+          img.onerror = () => { img.style.display='none'; ph.style.display='block'; };
+          const ph = document.createElement('span');
+          ph.className = 'item-picker-img-placeholder';
+          ph.textContent = '◈';
+          ph.style.display = 'none';
+          imgWrap.appendChild(img);
+          imgWrap.appendChild(ph);
+        } else {
+          const ph = document.createElement('span');
+          ph.className = 'item-picker-img-placeholder';
+          ph.textContent = '◈';
+          imgWrap.appendChild(ph);
+        }
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'item-picker-name';
+        nameEl.textContent = item.name;
+
+        opt.appendChild(imgWrap);
+        opt.appendChild(nameEl);
+
+        if (item.implicit) {
+          const imp = document.createElement('span');
+          imp.className = 'item-picker-implicit';
+          imp.textContent = item.implicit;
+          opt.appendChild(imp);
+        }
+
+        opt.addEventListener('mousedown', e => {
+          e.preventDefault();
+          selectItem(item);
+        });
+
+        dropdown.appendChild(opt);
+        visibleOptions.push({ el: opt, item });
+      });
+    });
+
+    if (!visibleOptions.length) {
+      const noRes = document.createElement('div');
+      noRes.className = 'item-picker-no-results';
+      noRes.textContent = 'Nenhum item encontrado';
+      dropdown.appendChild(noRes);
+    }
+
+    highlightIndex = -1;
+    dropdown.style.display = 'block';
+  }
+
+  function selectItem(item) {
+    STATE.itemType = item.id;
+    STATE.prefixes = [null,null,null];
+    STATE.suffixes = [null,null,null];
+    STATE.runes    = [null,null,null,null];
+    STATE.selectedEssence = null;
+    searchInput.value = item.name;
+    document.getElementById('select-item-type').value = item.id;
+    closeDropdown();
+    renderAll();
+  }
+
+  function closeDropdown() {
+    dropdown.style.display = 'none';
+    visibleOptions = [];
+    highlightIndex = -1;
+  }
+
+  searchInput.addEventListener('focus', () => renderDropdown(searchInput.value));
+  searchInput.addEventListener('input', () => renderDropdown(searchInput.value));
+  searchInput.addEventListener('blur', () => { setTimeout(closeDropdown, 150); });
+
+  searchInput.addEventListener('keydown', e => {
+    if (dropdown.style.display === 'none') return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlightIndex = Math.min(highlightIndex + 1, visibleOptions.length - 1);
+      visibleOptions.forEach((o, i) => o.el.classList.toggle('highlighted', i === highlightIndex));
+      visibleOptions[highlightIndex]?.el.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlightIndex = Math.max(highlightIndex - 1, 0);
+      visibleOptions.forEach((o, i) => o.el.classList.toggle('highlighted', i === highlightIndex));
+      visibleOptions[highlightIndex]?.el.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightIndex >= 0 && visibleOptions[highlightIndex]) {
+        selectItem(visibleOptions[highlightIndex].item);
+      }
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  });
+
+  // Sync search input when item is loaded from build
+  window._syncItemPicker = () => {
+    const item = getItem(STATE.itemType);
+    searchInput.value = item ? item.name : '';
+  };
 }
 
 function initEventListeners() {
-  // Item type
+  // Item type — handled by visual picker, but keep select in sync
   document.getElementById('select-item-type').addEventListener('change', e => {
+    if (!e.target.value) return; // picker handles selection
     STATE.itemType = e.target.value;
     STATE.prefixes = [null, null, null];
     STATE.suffixes = [null, null, null];
@@ -1846,6 +2019,8 @@ function initEventListeners() {
     STATE.desiredMods = [];
     STATE.quality    = { amount: 0, catalystType: null };
     document.getElementById('select-item-type').value = '';
+    const si = document.getElementById('input-item-search');
+    if (si) si.value = '';
     renderAll();
   });
 

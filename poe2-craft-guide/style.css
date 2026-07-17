@@ -825,7 +825,89 @@ select option { background: #1a1408; color: var(--text-primary); }
   .currency-grid { grid-template-columns: repeat(5, 1fr); }
 }
 
-/* ============================================================ ITEM IMAGE */
+/* ============================================================ ITEM PICKER */
+.item-select-wrap { position: relative; }
+.item-select-wrap input[type="text"] {
+  padding-left: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+}
+.item-select-wrap input[type="text"]:focus { border-color: var(--border-bright); }
+
+.item-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: #1a1508;
+  border: 1px solid var(--border-gold);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  max-height: 280px;
+  overflow-y: auto;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+}
+.item-picker-group-label {
+  font-size: 0.62rem;
+  font-family: var(--font-subheading);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 6px 10px 3px;
+  border-top: 1px solid var(--border-faint);
+}
+.item-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.item-picker-option:hover,
+.item-picker-option.highlighted { background: rgba(200,151,58,0.12); }
+.item-picker-option.selected { background: rgba(200,151,58,0.18); }
+.item-picker-img-wrap {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.item-picker-img {
+  max-width: 28px;
+  max-height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+}
+.item-picker-img-placeholder {
+  font-size: 1rem;
+  color: var(--border-medium);
+}
+.item-picker-name {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  flex: 1;
+}
+.item-picker-implicit {
+  font-size: 0.65rem;
+  color: var(--text-hint);
+  font-style: italic;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-picker-no-results {
+  padding: 10px;
+  text-align: center;
+  color: var(--text-hint);
+  font-size: 0.78rem;
+  font-style: italic;
+}
 .item-image-wrap {
   margin: 4px auto 2px;
   display: flex;
