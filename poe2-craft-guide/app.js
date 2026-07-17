@@ -1606,8 +1606,9 @@ function renderDesiredMods() {
   addSelect.innerHTML = '<option value="">— Selecionar afixo —</option>';
 
   if (STATE.itemType) {
+    const baseType = getBaseType();
     const all = DATA.mods.filter(m =>
-      m.itemTypes.includes(STATE.itemType) &&
+      m.itemTypes.includes(baseType) &&
       m.tiers.some(t => STATE.ilvl >= t.minIlvl) &&
       !STATE.desiredMods.includes(m.id)
     );
