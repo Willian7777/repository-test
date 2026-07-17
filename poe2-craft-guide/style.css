@@ -315,6 +315,8 @@ select option { background: #1a1408; color: var(--text-primary); }
   padding: 5px 6px;
   border-color: var(--border-faint);
 }
+.mod-slot select optgroup { color: var(--text-muted); font-style: italic; background: #0e0b07; }
+.mod-slot select optgroup option { color: var(--text-secondary); font-style: normal; background: #0e0b07; }
 .mod-slot select.has-value { border-color: var(--border-gold); }
 .mod-slot select.has-value.is-desired {
   border-color: var(--desired-color);

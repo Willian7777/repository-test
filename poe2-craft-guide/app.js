@@ -1352,22 +1352,36 @@ function renderModSlots(type) {
     emptyOpt.textContent = '— Vazio —';
     sel.appendChild(emptyOpt);
 
+    // Each mod → optgroup, each tier → option (value = "modId|tierNum")
     pool.forEach(mod => {
-      const opt = document.createElement('option');
-      opt.value = mod.id;
-      const range = getModRangeForIlvl(mod, STATE.ilvl);
-      opt.textContent = `${mod.displayName}${range ? ` (${range})` : ''}`;
-      if (currentSlot?.id === mod.id) opt.selected = true;
-      sel.appendChild(opt);
+      const validTiers = mod.tiers.filter(t => STATE.ilvl >= t.minIlvl);
+      if (!validTiers.length) return;
+
+      const group = document.createElement('optgroup');
+      group.label = mod.displayName.replace(/#/g, '…');
+
+      validTiers.forEach(tier => {
+        const opt = document.createElement('option');
+        opt.value = `${mod.id}|${tier.tier}`;
+        const valRange = mod.hasTwoValues
+          ? `(${tier.minVal}-${tier.maxVal}) a (${tier.minVal2}-${tier.maxVal2})`
+          : `${tier.minVal}–${tier.maxVal}`;
+        opt.textContent = `${tier.label}  ${valRange}`;
+        if (currentSlot?.id === mod.id && currentSlot?.tier === tier.tier) opt.selected = true;
+        group.appendChild(opt);
+      });
+
+      sel.appendChild(group);
     });
 
-    // Also show currently selected mod even if not in pool (e.g. after item type change)
+    // Show currently selected mod if outside pool
     if (currentSlot && !pool.find(m => m.id === currentSlot.id)) {
       const mod = getMod(currentSlot.id);
       if (mod) {
+        const t = mod.tiers.find(x => x.tier === currentSlot.tier) || mod.tiers[0];
         const opt = document.createElement('option');
-        opt.value = mod.id;
-        opt.textContent = `${mod.displayName} [fora do pool atual]`;
+        opt.value = `${mod.id}|${t.tier}`;
+        opt.textContent = `${mod.displayName} [${t.label}] [fora do pool atual]`;
         opt.selected = true;
         sel.appendChild(opt);
       }
@@ -1379,13 +1393,17 @@ function renderModSlots(type) {
     }
 
     sel.addEventListener('change', e => {
-      const newId = e.target.value || null;
+      const rawVal = e.target.value || null;
       const slotArr = type === 'prefix' ? STATE.prefixes : STATE.suffixes;
-      if (newId) {
-        const mod = getMod(newId);
-        const tier = mod.tiers.filter(t => STATE.ilvl >= t.minIlvl)[0] || mod.tiers[mod.tiers.length - 1];
+      if (rawVal) {
+        const [modId, tierStr] = rawVal.split('|');
+        const mod  = getMod(modId);
+        const tierNum = parseInt(tierStr, 10);
+        const tier = mod.tiers.find(t => t.tier === tierNum)
+                  || mod.tiers.filter(t => STATE.ilvl >= t.minIlvl)[0]
+                  || mod.tiers[mod.tiers.length - 1];
         slotArr[i] = {
-          id:     newId,
+          id:     modId,
           tier:   tier.tier,
           value:  randInt(tier.minVal, tier.maxVal),
           value2: mod.hasTwoValues ? randInt(tier.minVal2, tier.maxVal2) : null,
